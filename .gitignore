@@ -9,3 +9,4 @@ vgg_v1.txt
 nohup.out
 *.h5
 .idea/
+data/
