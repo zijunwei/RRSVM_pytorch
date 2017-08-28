@@ -1,8 +1,96 @@
 #include <TH/TH.h>
+#define real float
 
 
-int c_forward(THFloatTensor *input, THFloatTensor *s,
-		       THFloatTensor *output){
+static void c_forward_single_batch( real *input_p, real *output_p, THIndex_t *ind_p, long nslices,
+          long iwidth,
+          long iheight,
+          long owidth,
+          long oheight,
+          int kW,
+          int kH)
+          {
+long k
+#pragma omp parallel for private(k)
+  for (k = 0; k < nslices; k++)
+  {
+    /* loop over output */
+    long i, j;
+    real *ip = input_p   + k*iwidth*iheight;
+    THLongTensor *indp = ind_p   + k*iwidth*iheight;
+    real *sp = s + k*kW*kH
+    for(i = 0; i < oheight; i++)
+    {
+      for(j = 0; j < owidth; j++)
+      {
+        long hstart = i * kW;
+        long wstart = j * kH;
+        long hend = fminf(hstart + (kH), iheight);
+        long wend = fminf(wstart + (kW), iwidth);
+
+        /* local pointers */
+        real *op = output_p  + k*owidth*oheight + i*owidth + j;
+
+        long tcntr = 0;
+        long x,y;
+
+        THTensor * tmpVal = THTensor_(new)();
+        THTensor_(resize1d)(tmpVal, kH * kW);
+        real *tmp__data = THTensor_(data)(tmpVal);
+
+        THLongTensor * tmpIndices = THLongTensor_new();
+        THLongTensor_resize1d(tmpIndices, kH * kW);
+        long *tmpi__data = THLongTensor_data(tmpIndices);
+
+
+        for(y = hstart; y < hend; y += 1)
+        {
+          for(x = wstart; x < wend; x += 1)
+          {
+            tcntr = y*iwidth + x;
+
+            tmp__data[tcntr] = *(ip + tcntr);
+            tmpi__data[tcntr] = tcntr
+
+          }
+        }
+        THTensor_(quicksortdescend)(tmp__data, tmpi__data, kH*kW, 1);
+
+        real s_output = 0;
+        for(y = hstart; y < hend; y += 1)
+        {
+          for(x = wstart; x < wend; x += 1)
+          {
+            tcntr = y*iwidth + x;
+            s_output += *(sp + tcntr) * tmp__data[tcntr]
+            *(indp + tcntr) = tmpi__data[tcntr] + TH_INDEX_BASE
+
+          }
+        }
+
+        /* set output to local max */
+        *op = s_output;
+      }
+    }
+  }
+
+  THTensor_(free)(tmpVal);
+  THLongTensor_free(tmpIndices);
+}
+
+int c_forward(THFloatTensor *output, THFloatTensor *input, THFloatTensor *s, THLongTensor *indices)
+{
+
+  real * input_data;
+  real * s_data;
+  THLongTensor * indices_data;
+
+  real * output_data;
+
+  int kW = 3;
+  int kH = 3;
+
+
 //Adapted from Convolution:
 
 
@@ -21,87 +109,38 @@ int c_forward(THFloatTensor *input, THFloatTensor *s,
 
   // Batch size + input planes
   long batchSize = input->size[0];
-   int nPlane = input->size[1]
+   int nPlane = input->size[1];
+
+
+
 
   // Resize output
   THTensor_(resize4d)(output, batchSize, nPlane, outputHeight, outputWidth);
   THTensor_(zero)(output);
+  THIndexTensor_(resize4d)(indices, batchSize, nPlane, inputHeight, inputWidth)
 
-  // Resize temporary columns
-  THTensor_(resize2d)(columns, nInputPlane*kW*kH, outputHeight*outputWidth);
+  input_data = THTensor_(data)(input);
+  output_data = THTensor_(data)(output);
+  s_data = THTensor_(data)(s);
+  indices_data = THIndexTensor_(data)(indices);
 
-  // Define a buffer of ones, for bias accumulation
-  // Note: this buffer can be shared with other modules, it only ever gets increased,
-  // and always contains ones.
-  if (ones->nDimension != 2 || ones->size[0]*ones->size[1] < outputHeight*outputWidth) {
-    // Resize plane and fill with ones...
-    THTensor_(resize2d)(ones, outputHeight, outputWidth);
-    THTensor_(fill)(ones, 1);
-  }
-
-  // Helpers
-  THTensor *input_n = THTensor_(new)();
-  THTensor *output_n = THTensor_(new)();
-
-  // For each elt in batch, do:
-  for (int elt = 0; elt < batchSize; elt ++) {
-    // Matrix mulitply per output:
-    THTensor_(select)(input_n, input, 0, elt);
-    THTensor_(select)(output_n, output, 0, elt);
-
-    // Do Bias first:
-    // M,N,K are dims of matrix A and B
-    long m_ = nOutputPlane;
-    long n_ = outputHeight * outputWidth;
-    long k_ = 1;
-
-    // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
-    if (bias) {
-      THBlas_(gemm)(
-        't', 'n',
-        n_, m_, k_,
-        1,
-        THTensor_(data)(ones), k_,
-        THTensor_(data)(bias), k_,
-        0,
-        THTensor_(data)(output_n), n_
-      );
-    } else {
-      THTensor_(zero)(output_n);
-    }
-
-    // Extract columns:
-    THNN_(im2col)(
-      THTensor_(data)(input_n),
-      nInputPlane, inputHeight, inputWidth, kH, kW, padH, padW, dH, dW,
-      dilationH, dilationW,
-      THTensor_(data)(columns)
-    );
-
-    // M,N,K are dims of matrix A and B
-    long m = nOutputPlane;
-    long n = columns->size[1];
-    long k = nInputPlane*kH*kW;
-
-    // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
-    THBlas_(gemm)(
-      'n', 'n',
-      n, m, k,
-      1,
-      THTensor_(data)(columns), n,
-      THTensor_(data)(weight), k,
-      1,
-      THTensor_(data)(output_n), n
-    );
-  }
-
-  // Free
-  THTensor_(free)(input_n);
-  THTensor_(free)(output_n);
+    long p
+    #pragma omp parallel for private(p)
+        for (p = 0; p < batchSize; p++)
+        {
+          c_forward_single_batch
+         (input_data+p*nPlane*inputWidth*inputHeight,
+          output_data+p*nPlane*outputWidth*outputHeight,
+          indices_data+p*nPlane*outputWidth*outputHeight,
+          nInputPlane,
+          inputWidth, inputHeight,
+          outputWidth, outputHeight,
+          kW, kH);
+        }
 
   THTensor_(free)(input);
-  THTensor_(free)(weight);
-  if (bias) THTensor_(free)(bias);
+  THTensor_(free)(s);
+
 
 }
 

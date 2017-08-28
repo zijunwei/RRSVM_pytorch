@@ -39,9 +39,9 @@ class RRSVM_F_v2(torch.autograd.Function):
         output = input.new(*self._output_size(input, s))
         indices = input.new().long()
         if not input.is_cuda():
-            RRSVM.c_forward(input, s, indices, output)
+            RRSVM.c_forward(output, input, s, indices)
         else:
-            RRSVM.c_forward_cuda(input, s, indices, output)
+            RRSVM.c_forward_cuda(output, input, s, indices)
         return output
 
     def _grad_input(self, input, s, indices, grad_output):
