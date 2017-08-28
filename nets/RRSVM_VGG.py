@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from nets.RRSVM import RRSVM
+from nets.RRSVM_v1 import RRSVM
 import VGGLayered_base
 
 from pytorch_utils.t_sets import getOutputSize
