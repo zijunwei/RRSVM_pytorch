@@ -63,8 +63,8 @@ long k
           {
             tcntr = y*iwidth + x;
             s_output += *(sp + tcntr) * tmp__data[tcntr]
-            *(indp + tcntr) = tmpi__data[tcntr] + TH_INDEX_BASE
-
+            THLongTensor *s_indp = ind_p   + k*iwidth*iheight + tcntr ;
+            * s_indp = tmpi__data[tcntr] + TH_INDEX_BASE
           }
         }
 
