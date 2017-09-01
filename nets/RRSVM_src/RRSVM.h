@@ -1,6 +1,15 @@
-int c_forward(THFloatTensor *output, THFloatTensor *input, THFloatTensor *s, THFloatTensor *indices);
+void RRSVM_updateOutput(THFloatTensor *input, THFloatTensor *output, THFloatTensor *s, THLongTensor *indices, THFloatTensor *columns, int kW, int kH,
+    int dW, int dH,
+    int padW, int padH,
+    int dilationW, int dilationH);
 
-int c_backward_grad_input(THFloatTensor *grad_input, THFloatTensor *grad_output, THFloatTensor *input, THFloatTensor *s, THFloatTensor *indices);
+void RRSVM_updateGradInput(THFloatTensor *input, THFloatTensor *gradOutput, THFloatTensor *gradInput, THFloatTensor *s, THLongTensor *indices, THFloatTensor * gradColumns, int kW, int kH,
+    int dW, int dH,
+    int padW, int padH,
+    int dilationW, int dilationH );
 
-int c_backward_grad_params(THFloatTensor *grad_input, THFloatTensor *grad_output, THFloatTensor *input, THFloatTensor *s, THFloatTensor * indices);
+void RRSVM_accGradParameters(THFloatTensor *input, THFloatTensor *gradOutput, THFloatTensor *gradS, THLongTensor * indices, THFloatTensor *columns, int kW, int kH,
+    int dW, int dH,
+    int padW, int padH,
+    int dilationW, int dilationH);
 
