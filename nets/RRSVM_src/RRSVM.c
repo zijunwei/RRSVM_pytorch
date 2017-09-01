@@ -1,8 +1,7 @@
 #include <TH/TH.h>
 #define real float
 
-
-static void c_forward_single_batch( real *input_p, real *output_p, THIndex_t *ind_p, long nslices,
+static void c_forward_single( real *input_p, real *s_p, real *output_p, THIndex_t *ind_p, long nslices,
           long iwidth,
           long iheight,
           long owidth,
@@ -18,7 +17,7 @@ long k
     long i, j;
     real *ip = input_p   + k*iwidth*iheight;
     THLongTensor *indp = ind_p   + k*iwidth*iheight;
-    real *sp = s + k*kW*kH
+    real *sp = s_p + k*kW*kH
     for(i = 0; i < oheight; i++)
     {
       for(j = 0; j < owidth; j++)
@@ -55,7 +54,7 @@ long k
           }
         }
         THTensor_(quicksortdescend)(tmp__data, tmpi__data, kH*kW, 1);
-
+        //TODO: gather should be used instead of scatter...
         real s_output = 0;
         for(y = hstart; y < hend; y += 1)
         {
@@ -128,8 +127,8 @@ int c_forward(THFloatTensor *output, THFloatTensor *input, THFloatTensor *s, THL
     #pragma omp parallel for private(p)
         for (p = 0; p < batchSize; p++)
         {
-          c_forward_single_batch
-         (input_data+p*nPlane*inputWidth*inputHeight,
+          c_forward_single_batch(input_data+p*nPlane*inputWidth*inputHeight,
+          s_data + p*nPlane*kW*kH,
           output_data+p*nPlane*outputWidth*outputHeight,
           indices_data+p*nPlane*outputWidth*outputHeight,
           nInputPlane,
