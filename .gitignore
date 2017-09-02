@@ -10,3 +10,4 @@ nohup.out
 *.h5
 .idea/
 data/
+*.so

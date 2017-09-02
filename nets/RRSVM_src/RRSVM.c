@@ -1,20 +1,60 @@
 #include <TH/TH.h>
 #define real float
 
-//static void THNN_Floatim2col(const float* data_im, const int channels,
-//      const int height, const int width, const int kernel_h, const int kernel_w,
-//      const int pad_h, const int pad_w,
-//      const int stride_h, const int stride_w,
-//      const int dilation_h, const int dilation_w,
-//      float* data_col);
-//
-//
-//static void THNN_Floatcol2im(const float * data_im, const int channels, const int inputHeight, const int inputWidth,
-//const int outputHeight, const int outputWidth,
-//const int kH, const int kW,
-//const int padH, const int padW,
-//const int dH, const int dW,
-//const int dilationH, const int dilationW, float *input_h_w);
+static void THNN_Floatim2col(const real* data_im, const int channels,
+      const int height, const int width, const int kernel_h, const int kernel_w,
+      const int pad_h, const int pad_w,
+      const int stride_h, const int stride_w,
+      const int dilation_h, const int dilation_w,
+      real* data_col) {
+  const int height_col = (height + 2 * pad_h -
+                          (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
+  const int width_col = (width + 2 * pad_w -
+                         (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
+  const int channels_col = channels * kernel_h * kernel_w;
+  for (int c_col = 0; c_col < channels_col; ++c_col) {
+    int w_offset = c_col % kernel_w;
+    int h_offset = (c_col / kernel_w) % kernel_h;
+    int c_im = c_col / kernel_h / kernel_w;
+    for (int h_col = 0; h_col < height_col; ++h_col) {
+      for (int w_col = 0; w_col < width_col; ++w_col) {
+        int h_im = h_col * stride_h - pad_h + h_offset * dilation_h;
+        int w_im = w_col * stride_w - pad_w + w_offset * dilation_w;
+        data_col[(c_col * height_col + h_col) * width_col + w_col] =
+          (h_im >= 0 && w_im >= 0 && h_im < height && w_im < width) ?
+          data_im[(c_im * height + h_im) * width + w_im] : 0;
+      }
+    }
+  }
+}
+
+static void THNN_Floatcol2im(const real* data_col, const int channels,
+      const int height, const int width,
+      const int output_height, const int output_width,
+      const int kernel_h, const int kernel_w,
+      const int pad_h, const int pad_w,
+      const int stride_h, const int stride_w,
+      const int dilation_h, const int dilation_w,
+      real* data_im) {
+  memset(data_im, 0, sizeof(real) * height * width * channels);
+  const int height_col = output_height;
+  const int width_col = output_width;
+  const int channels_col = channels * kernel_h * kernel_w;
+  for (int c_col = 0; c_col < channels_col; ++c_col) {
+    int w_offset = c_col % kernel_w;
+    int h_offset = (c_col / kernel_w) % kernel_h;
+    int c_im = c_col / kernel_h / kernel_w;
+    for (int h_col = 0; h_col < height_col; ++h_col) {
+      for (int w_col = 0; w_col < width_col; ++w_col) {
+        int h_im = h_col * stride_h - pad_h + h_offset * dilation_h;
+        int w_im = w_col * stride_w - pad_w + w_offset * dilation_w;
+        if (h_im >= 0 && h_im < height && w_im >= 0 && w_im < width)
+          data_im[(c_im * height + h_im) * width + w_im] +=
+            data_col[(c_col * height_col + h_col) * width_col + w_col];
+      }
+    }
+  }
+}
 
 
 void RRSVM_updateOutput(THFloatTensor *input, THFloatTensor *output, THFloatTensor *s, THLongTensor *indices, THFloatTensor *columns, int kW, int kH,
