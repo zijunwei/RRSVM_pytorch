@@ -1,4 +1,4 @@
-void RRSVM_updateOutput(THFloatTensor *input, THFloatTensor *output, THFloatTensor *s, THLongTensor *indices, THFloatTensor *columns, int kW, int kH,
+void RRSVM_updateOutput(THFloatTensor *input, THFloatTensor *s, THFloatTensor *output, THLongTensor *indices, int kW, int kH,
     int dW, int dH,
     int padW, int padH,
     int dilationW, int dilationH);
