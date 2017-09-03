@@ -58,6 +58,7 @@ Using ``torchvision``, it’s extremely easy to load CIFAR10.
 import torch
 import torchvision
 import torchvision.transforms as transforms
+
 import nets.cifar_nets as nets
 
 ########################################################################
@@ -114,10 +115,6 @@ print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
 
 from torch.autograd import Variable
 import torch.nn as nn
-import torch.nn.functional as F
-
-
-
 
 net = nets.RRSVMNetV1()
 

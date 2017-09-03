@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from nets.RRSVM_v1 import RRSVM
-import VGGLayered_base
 
+import VGGLayered_base
+from RRSVM.RRSVM_v1 import RRSVM
 from pytorch_utils.t_sets import getOutputSize
 
 

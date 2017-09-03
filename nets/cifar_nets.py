@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from RRSVM_v1 import RRSVM
+from RRSVM.RRSVM_v1 import RRSVM
 from pytorch_utils.t_sets import getOutputSize
 import torch
 from torch.autograd import Variable
