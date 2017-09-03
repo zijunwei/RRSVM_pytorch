@@ -128,8 +128,6 @@ class RRSVM_Module(torch.nn.Module):
         init_val = 1. / n_elt
         self.s.data.fill_(init_val)
 
-
-
     def forward(self, input):
         F = RRSVM_F(self.kernel_size, self.padding, self.stride, self.dilation)
         return F(input, self.s)
