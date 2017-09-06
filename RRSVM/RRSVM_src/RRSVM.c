@@ -23,7 +23,7 @@ static void THNN_Floatim2col(const real* data_im, const int channels,
         int w_im = w_col * stride_w - pad_w + w_offset * dilation_w;
         data_col[(c_col * height_col + h_col) * width_col + w_col] =
           (h_im >= 0 && w_im >= 0 && h_im < height && w_im < width) ?
-          data_im[(c_im * height + h_im) * width + w_im] : 0;
+          data_im[(c_im * height + h_im) * width + w_im] : 0; // This is padding with zero
       }
     }
   }
@@ -125,8 +125,6 @@ void RRSVM_updateOutput(THFloatTensor *input, THFloatTensor *s, THFloatTensor *o
 
                      for (inner_product = 0; inner_product < kW * kH; inner_product ++){
                         output_data[elt*nInputPlane*outputHeight*outputWidth + chl*outputHeight*outputWidth + i * outputWidth + j] += s_data[chl* kH *kW + inner_product] * sorted_input_1d_data[inner_product];
-                        //or
-//                        output_data[elt*nInputPlane*outputHeight*outputWidth + chl*outputHeight*outputWidth + i * outputWidth + j] += s_1d_data[sorted_index_1d_data[inner_product]] * column_1d_data[inner_product];
                         indices_data[elt*nInputPlane*outputHeight*outputWidth*kH*kW + chl*outputHeight*outputWidth*kH*kW + i * outputWidth*kH*kW + j*kH*kW + inner_product] = sorted_index_1d_data[inner_product];
                      }
                       THLongTensor_free(sorted_index_1d);
@@ -202,7 +200,8 @@ void RRSVM_updateGradInput(THFloatTensor *s, THLongTensor *indices, THFloatTenso
                      index = i * outputWidth + j;
                      for (inner_product = 0; inner_product < kW * kH; inner_product ++){
                         long idx = indices_data[elt*nInputPlane*outputHeight*outputWidth*kH*kW + chl*outputHeight*outputWidth*kH*kW + i*outputWidth*kH*kW + j*kW*kH + inner_product];
-                        gradInputColumns_data[inner_product*(outputWidth*outputHeight)+index] += s_data[chl*kW*kH+indices_data[idx]] * gradOutput_data[elt*nInputPlane*outputHeight*outputWidth + chl*outputHeight*outputWidth + i*outputWidth + j];
+                        //TODO: HERE is problematic
+                        gradInputColumns_data[idx*(outputWidth*outputHeight)+index] += s_data[chl*kW*kH+inner_product] * gradOutput_data[elt*nInputPlane*outputHeight*outputWidth + chl*outputHeight*outputWidth + i*outputWidth + j];
                      }
                 }
             }
@@ -277,9 +276,10 @@ void RRSVM_accGradParameters(THFloatTensor *input, THLongTensor * indices, THFlo
 
             THFloatTensor_resize3d(input_h_w, 1, inputHeight, inputWidth);
             THFloatTensor * columns = THFloatTensor_newWithSize2d(1*kW*kH, outputHeight*outputWidth);
-            real * columns_data = THFloatTensor_data(columns);
 
             THNN_Floatim2col(THFloatTensor_data(input_h_w), 1, inputHeight, inputWidth, kH, kW, padH, padW, dH, dW, dilationH, dilationW, THFloatTensor_data(columns));
+            real * columns_data = THFloatTensor_data(columns);
+
             long i, j, index, inner_product;
             for (i = 0; i < outputHeight; i ++)
             {

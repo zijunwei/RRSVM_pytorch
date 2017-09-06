@@ -138,6 +138,12 @@ class RRSVM_Module(torch.nn.Module):
         F = RRSVM_F(self.kernel_size, self.padding, self.stride, self.dilation)
         return F(input, self.s)
 
+    def toggleFreeze(self):
+        for param in self.parameters():
+            param.requires_grad = not param.requires_grad
+
+    def param_loss(self, loss_fn):
+        return loss_fn(self.s)
 
 def RRSVM_L1Loss(net, loss_fn):
     loss = 0
@@ -150,8 +156,9 @@ def RRSVM_L1Loss(net, loss_fn):
 if __name__ == '__main__':
     #TODO: TEST Starting HERE!
     RRSVM_block = RRSVM_Module(in_channels=1, kernel_size=3, stride=1)
-    x_data = np.array(range(0, 36))
-    x = torch.FloatTensor(x_data).resize_([1, 1, 6, 6])
+    x_data = np.array(np.random.randn(9))
+    x_idx = np.argsort(-x_data)
+    x = torch.FloatTensor(x_data).resize_([1, 1, 3, 3])
     y = Variable(torch.FloatTensor([1]), requires_grad=False)
     input_x = Variable(x)
 
