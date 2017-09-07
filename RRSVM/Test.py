@@ -14,7 +14,7 @@ def test_gradient(input, kernel_size=3, padding=0, stride=1):
 
     F = RRSVM.RRSVM_F(kernel_size=kernel_size, padding=padding, stride=stride, dilation=1)
 
-    test = gradcheck(lambda i, s: F(i, s), inputs=input, eps=1e-3, atol=1e-2, rtol=1e-1)
+    test = gradcheck(lambda i, s: F(i, s), inputs=input, eps=1e-3, atol=1e-3, rtol=1e-3)
     print test
 
 
