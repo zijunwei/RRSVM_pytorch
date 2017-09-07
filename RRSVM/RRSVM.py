@@ -18,10 +18,10 @@ class RRSVM_F(torch.autograd.Function):
 
     def forward(self, input, s):
 
-        assert self.kernel_size == s.size(1) and self.kernel_size == s.size(2), 'Kernel size should be the same as s size'
+        assert self.kernel_size * self.kernel_size == s.size(1), 'Kernel size should be the same as s size'
         k_s = s.dim()
-        if k_s != 3:
-            raise RuntimeError('S should be 3D [Channel, kH, kW]')
+        if k_s != 2:
+            raise RuntimeError('S should be 2D [Channel, kH * kW]')
 
         k_i = input.dim()
         if k_i != 4:
@@ -128,7 +128,7 @@ class RRSVM_Module(torch.nn.Module):
         self.stride = stride
         self.padding = padding
         self.dilation = dilation
-        self.s = Parameter(torch.Tensor(in_channels, self.kernel_size, self.kernel_size))
+        self.s = Parameter(torch.Tensor(in_channels, self.kernel_size * self.kernel_size))
         # initialize s:
         n_elt = in_channels * self.kernel_size * self.kernel_size
         init_val = 1. / n_elt

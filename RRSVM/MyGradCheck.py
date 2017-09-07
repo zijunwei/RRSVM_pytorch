@@ -61,8 +61,8 @@ def get_numerical_jacobian(fn, input, target, eps=1e-3):
     x_tensors = [t for t in iter_tensors(target, True)]
     j_tensors = [t for t in iter_tensors(jacobian)]
 
-    outa = torch.DoubleTensor(output_size)
-    outb = torch.DoubleTensor(output_size)
+    outa = torch.FloatTensor(output_size)
+    outb = torch.FloatTensor(output_size)
 
     # TODO: compare structure
     for x_tensor, d_tensor in zip(x_tensors, j_tensors):
@@ -75,8 +75,9 @@ def get_numerical_jacobian(fn, input, target, eps=1e-3):
             outb.copy_(fn(input))
             flat_tensor[i] = orig
 
-            outb.add_(-1, outa).div_(2 * eps)
-            d_tensor[i] = outb
+            grad = (outb.numpy() - outa.numpy())/ (2*eps)
+            # outb.add_(-1, outa).div_(2 * eps)
+            d_tensor[i] = torch.from_numpy(grad)
 
     return jacobian
 
@@ -139,16 +140,18 @@ def gradcheck(func, inputs, eps=1e-6, atol=1e-5, rtol=1e-3):
 
         def fn(input):
             return _as_tuple(func(*input))[i].data
-
-        numerical = get_numerical_jacobian(fn, inputs, inputs, eps)
         analytical = get_analytical_jacobian(_as_tuple(inputs), o)
-
-        for a, n in zip(analytical, numerical):
+        print analytical
+        numerical = get_numerical_jacobian(fn, inputs, inputs, eps)
+        print numerical
+        for k,  (a, n) in enumerate(zip(analytical, numerical)):
+            relative_loss = (a - n) / (n + eps)
+            print relative_loss
             if not ((a - n).abs() <= (atol + rtol * n.abs())).all():
-                print "{:d}th Input Grad is problematic".format(i)
-                Flag = False
-            else:
-                print "{:d}th Input Grad is None problematic".format(i)
+                 print "{:d}th Input Grad is problematic".format(i)
+                 Flag = False
+            # else:
+            #     print "{:d}th Input Grad is None problematic".format(i)
 
 
     # check if the backward multiplies by grad_output

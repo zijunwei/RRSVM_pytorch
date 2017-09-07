@@ -68,7 +68,7 @@ void RRSVM_updateOutput(THFloatTensor *input, THFloatTensor *s, THFloatTensor *o
   int nOutputPlane = s->size[0];
 
   input = THFloatTensor_newContiguous(input);
-  THFloatTensor_resize2d(s, nInputPlane, kW*kH);
+//  THFloatTensor_resize2d(s, nInputPlane, kW*kH);
   s = THFloatTensor_newContiguous(s);
 
   long inputWidth   = input->size[3];
@@ -100,7 +100,7 @@ void RRSVM_updateOutput(THFloatTensor *input, THFloatTensor *s, THFloatTensor *o
         for (int chl = 0; chl < nInputPlane; chl ++){
             THFloatTensor_select(input_h_w, input_d_h_w, 0, chl);
 
-            THFloatTensor_resize3d(input_h_w, 1, inputHeight, inputWidth);
+//            THFloatTensor_resize3d(input_h_w, 1, inputHeight, inputWidth);
             THFloatTensor * columns = THFloatTensor_newWithSize2d(1*kW*kH, outputHeight*outputWidth);
             THFloatTensor_zero(columns);
             THNN_Floatim2col(THFloatTensor_data(input_h_w), 1, inputHeight, inputWidth, kH, kW, padH, padW, dH, dW, dilationH, dilationW, THFloatTensor_data(columns));
@@ -136,7 +136,7 @@ void RRSVM_updateOutput(THFloatTensor *input, THFloatTensor *s, THFloatTensor *o
     }
   }
   // Resize back
-  THFloatTensor_resize3d(s, nOutputPlane, kH, kW);
+//  THFloatTensor_resize3d(s, nOutputPlane, kH, kW);
   // Free
   THFloatTensor_free(input_d_h_w);
   THFloatTensor_free(input_h_w);
@@ -153,10 +153,7 @@ void RRSVM_updateGradInput(THFloatTensor *s, THLongTensor *indices, THFloatTenso
     int dilationW, int dilationH ){
 
   int nInputPlane = s->size[0];
-  int nOutputPlane = s->size[0];
 
-  //Turn s from [D, kH, kW] to [D, kH * kW]
-  THFloatTensor_resize2d(s, nOutputPlane, kH * kW);
   s = THFloatTensor_newContiguous(s);
   gradOutput = THFloatTensor_newContiguous(gradOutput);
   indices = THLongTensor_newContiguous(indices);
@@ -188,7 +185,7 @@ void RRSVM_updateGradInput(THFloatTensor *s, THLongTensor *indices, THFloatTenso
 
         for (int chl = 0; chl < nInputPlane; chl ++){
             THFloatTensor_select(gradinput_h_w, gradinput_d_h_w, 0, chl);
-            THFloatTensor_resize3d(gradinput_h_w, 1, inputHeight, inputWidth);
+//            THFloatTensor_resize3d(gradinput_h_w, 1, inputHeight, inputWidth);
             THFloatTensor * gradInputColumns = THFloatTensor_newWithSize2d(1*kW*kH, outputHeight*outputWidth);
             THFloatTensor_zero(gradInputColumns);
             real * gradInputColumns_data = THFloatTensor_data(gradInputColumns);
@@ -210,7 +207,7 @@ void RRSVM_updateGradInput(THFloatTensor *s, THLongTensor *indices, THFloatTenso
         THFloatTensor_free(gradInputColumns);
     }
   }
-  THFloatTensor_resize3d(s, nOutputPlane, kH, kW);
+//  THFloatTensor_resize3d(s, nOutputPlane, kH, kW);
   THFloatTensor_free(gradinput_d_h_w);
   THFloatTensor_free(gradinput_h_w);
 
@@ -229,7 +226,7 @@ void RRSVM_accGradParameters(THFloatTensor *input, THLongTensor * indices, THFlo
     int dilationW, int dilationH){
 
   int nInputPlane = input->size[1];
-  int nOutputPlane = input->size[1];
+//  int nOutputPlane = input->size[1];
 
   input = THFloatTensor_newContiguous(input);
   gradOutput = THFloatTensor_newContiguous(gradOutput);
@@ -245,15 +242,10 @@ void RRSVM_accGradParameters(THFloatTensor *input, THLongTensor * indices, THFlo
 
   long batchSize = input->size[0];
 
-  THFloatTensor_resize2d(gradS, nOutputPlane, kH * kW);
-  //TODO further check if this is still configuous...
-//  THArgCheck(THFloatTensor_isContiguous(gradS), 3, "gradS needs to be contiguous");
-
   THFloatTensor_zero(gradS);
 
   THFloatTensor *input_d_h_w = THFloatTensor_new();
   THFloatTensor *input_h_w = THFloatTensor_new();
-
 
    real *input_data, *output_data, *gradS_data;
   long *indices_data;
@@ -274,7 +266,7 @@ void RRSVM_accGradParameters(THFloatTensor *input, THLongTensor * indices, THFlo
 //            THFloatTensor_select(gradoutput_h_w, gradoutput_d_h_w, 0, chl);
 //            THFloatTensor_select(s_h_w_1d, gradS, 0, chl);
 
-            THFloatTensor_resize3d(input_h_w, 1, inputHeight, inputWidth);
+//            THFloatTensor_resize3d(input_h_w, 1, inputHeight, inputWidth);
             THFloatTensor * columns = THFloatTensor_newWithSize2d(1*kW*kH, outputHeight*outputWidth);
 
             THNN_Floatim2col(THFloatTensor_data(input_h_w), 1, inputHeight, inputWidth, kH, kW, padH, padW, dH, dW, dilationH, dilationW, THFloatTensor_data(columns));
@@ -286,24 +278,17 @@ void RRSVM_accGradParameters(THFloatTensor *input, THLongTensor * indices, THFlo
                 for(j = 0; j < outputWidth; j ++)
                 {
                      index = i * outputWidth + j;
-//                     THFloatTensor_select(column_1d, columns, 1, index);
-//                     sorted_index_1d = indices_data[elt][chl][i][j]
-//                     long *sorted_index_1d_data = &indices_data[elt*nInputPlane*outputHeight*outputWidth + chl* outputHeight*outputWidth + i*outputWidth + j];
-//                     real *input_1d_data = THFloatTensor_data(column_1d);
                      for (inner_product = 0; inner_product < kW * kH; inner_product ++){
                         long idx = indices_data[elt*nInputPlane*outputHeight*outputWidth*kH*kW + chl*outputHeight*outputWidth*kH*kW + i*outputWidth*kH*kW + j*kW*kH + inner_product];
                         gradS_data[chl*(kW*kH) + inner_product] += columns_data[idx*outputHeight*outputHeight+index] * output_data[elt*nInputPlane*outputHeight*outputWidth + chl*outputHeight*outputWidth + i*outputWidth + j];
-
                      }
                 }
             }
-                    THFloatTensor_free(columns);
-
+            THFloatTensor_free(columns);
     }
 
   }
   // Resize back
-  THFloatTensor_resize3d(gradS, nOutputPlane, kH, kW);
   // Free
   THFloatTensor_free(input_d_h_w);
   THFloatTensor_free(input_h_w);
