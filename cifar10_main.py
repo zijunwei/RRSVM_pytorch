@@ -18,6 +18,7 @@ import progressbar
 from torch.autograd import Variable
 from datasets.cifar10 import lenet
 from py_utils import dir_utils
+from pt_utils import t_sets
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
@@ -98,6 +99,8 @@ def train(epoch):
     correct = 0
     total = 0
     total_n = 0
+    lr = args.lr * (0.1 ** (epoch // 50))
+    t_sets.set_lr(optimizer, lr)
     pbar = progressbar.ProgressBar(max_value=n_traindata//train_batch_size)
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         if use_cuda:

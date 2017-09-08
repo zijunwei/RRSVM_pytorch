@@ -31,7 +31,10 @@ def getOutputSize(input_size, module):
     output_size = output_image.size()
     return output_size
 
-
+def set_lr(optimizer, lr=0.1):
+    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
 
 if __name__ == '__main__':
     # rand_image = randImage()
