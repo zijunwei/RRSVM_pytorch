@@ -122,7 +122,7 @@ def train(epoch):
     t_acc = 100. * correct / total
     t_loss = train_loss / (total_n)
 
-    w_line = '\nTrain:\t{:d}\t{:.04f}\t{:.04f}\n'.format(epoch, t_loss, t_acc)
+    w_line = '\nTrain:\t{:d}\t{:.04f}\t{:.04f}\tLR {:0.6f}\n'.format(epoch, t_loss, t_acc, lr)
     print (w_line)
 
 def test(epoch):
