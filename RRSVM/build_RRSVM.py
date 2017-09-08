@@ -9,12 +9,12 @@ headers = ['RRSVM_src/RRSVM.h']
 defines = []
 with_cuda = False
 
-if torch.cuda.is_available():
-    print('Including CUDA code.')
-    sources += ['RRSVM_src/RRSVM_cuda.c']
-    headers += ['RRSVM_src/RRSVM_cuda.h']
-    defines += [('WITH_CUDA', None)]
-    with_cuda = True
+# if torch.cuda.is_available():
+#     print('Including CUDA code.')
+#     sources += ['RRSVM_src/RRSVM_cuda.c']
+#     headers += ['RRSVM_src/RRSVM_cuda.h']
+#     defines += [('WITH_CUDA', None)]
+#     with_cuda = True
 
 # extra_objects = ['RRSVM_src//roi_pooling.cu.o']
 # extra_objects = [os.path.join(this_file, fname) for fname in extra_objects]
