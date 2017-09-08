@@ -10,7 +10,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.init as init
-import python_utils.load_utils as load_utils
+import py_utils.load_utils as load_utils
 
 
 def get_mean_and_std(dataset):

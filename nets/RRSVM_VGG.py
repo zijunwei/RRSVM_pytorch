@@ -4,7 +4,7 @@ from torch.autograd import Variable
 
 import VGGLayered_base
 from RRSVM.RRSVM_v1 import RRSVM
-from pytorch_utils.t_sets import getOutputSize
+from pt_utils.t_sets import getOutputSize
 
 
 class RRSVMNet(nn.Module):

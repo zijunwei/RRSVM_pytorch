@@ -5,7 +5,7 @@ import torchvision.transforms as transforms
 from PIL import Image
 from torch.autograd import Variable
 
-from pytorch_utils.t_sets import getOutputSize
+from pt_utils.t_sets import getOutputSize
 # this is dividing VGG into smaller parts
 
 #TODO: add loading from file
