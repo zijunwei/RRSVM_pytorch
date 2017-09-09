@@ -84,8 +84,6 @@ void RRSVM_updateOutput(THFloatTensor *input, THFloatTensor *s, THFloatTensor *o
   THLongTensor_resize5d(indices, batchSize, nOutputPlane, outputHeight, outputWidth, kH * kW);
   THLongTensor_zero(indices);
 
-  THFloatTensor *input_d_h_w = THFloatTensor_new();
-  THFloatTensor *input_h_w = THFloatTensor_new();
   real /**input_data,*/ *output_data, *s_data;
   long *indices_data;
 
@@ -94,11 +92,18 @@ void RRSVM_updateOutput(THFloatTensor *input, THFloatTensor *s, THFloatTensor *o
   indices_data = THLongTensor_data(indices);
   s_data = THFloatTensor_data(s);
   long elt;
-//#pragma omp parallel for private(elt)
+
+
+
+#pragma omp parallel for private(elt)
    for (elt = 0; elt < batchSize; elt ++) {
+     THFloatTensor *input_d_h_w = THFloatTensor_new();
+
     THFloatTensor_select(input_d_h_w, input, 0, elt);
 
         for (int chl = 0; chl < nInputPlane; chl ++){
+            THFloatTensor *input_h_w = THFloatTensor_new();
+
             THFloatTensor_select(input_h_w, input_d_h_w, 0, chl);
 
 //            THFloatTensor_resize3d(input_h_w, 1, inputHeight, inputWidth);
@@ -134,13 +139,15 @@ void RRSVM_updateOutput(THFloatTensor *input, THFloatTensor *s, THFloatTensor *o
                 }
             }
             THFloatTensor_free(columns);
+            THFloatTensor_free(input_h_w);
     }
+    THFloatTensor_free(input_d_h_w);
   }
   // Resize back
 //  THFloatTensor_resize3d(s, nOutputPlane, kH, kW);
   // Free
-  THFloatTensor_free(input_d_h_w);
-  THFloatTensor_free(input_h_w);
+//  THFloatTensor_free(input_d_h_w);
+//  THFloatTensor_free(input_h_w);
   THFloatTensor_free(input);
   THFloatTensor_free(s);
 }
@@ -168,8 +175,6 @@ void RRSVM_updateGradInput(THFloatTensor *s, THLongTensor *indices, THFloatTenso
   THFloatTensor_zero(gradInput);
 
 
-  THFloatTensor *gradinput_d_h_w = THFloatTensor_new();
-  THFloatTensor *gradinput_h_w = THFloatTensor_new();
 //  THFloatTensor *column_1d = THFloatTensor_new();
 
   real *gradOutput_data, *s_data;
@@ -179,13 +184,17 @@ void RRSVM_updateGradInput(THFloatTensor *s, THLongTensor *indices, THFloatTenso
   s_data = THFloatTensor_data(s);
   indices_data = THLongTensor_data(indices);
 long elt;
-//#pragma omp parallel for private(elt)
+#pragma omp parallel for private(elt)
    for ( elt = 0; elt < batchSize; elt ++) {
     // Matrix mulitply per output:
+      THFloatTensor *gradinput_d_h_w = THFloatTensor_new();
+
     THFloatTensor_select(gradinput_d_h_w, gradInput, 0, elt);
 
 
         for (int chl = 0; chl < nInputPlane; chl ++){
+          THFloatTensor *gradinput_h_w = THFloatTensor_new();
+
             THFloatTensor_select(gradinput_h_w, gradinput_d_h_w, 0, chl);
 //            THFloatTensor_resize3d(gradinput_h_w, 1, inputHeight, inputWidth);
             THFloatTensor * gradInputColumns = THFloatTensor_newWithSize2d(1*kW*kH, outputHeight*outputWidth);
@@ -207,12 +216,13 @@ long elt;
 
         THNN_Floatcol2im(gradInputColumns_data, 1, inputHeight, inputWidth, outputHeight, outputWidth, kH, kW, padH, padW, dH, dW, dilationH, dilationW, THFloatTensor_data(gradinput_h_w));
         THFloatTensor_free(gradInputColumns);
+          THFloatTensor_free(gradinput_h_w);
 
     }
+      THFloatTensor_free(gradinput_d_h_w);
+
   }
 //  THFloatTensor_resize3d(s, nOutputPlane, kH, kW);
-  THFloatTensor_free(gradinput_d_h_w);
-  THFloatTensor_free(gradinput_h_w);
 
 
   THFloatTensor_free(s);
@@ -247,8 +257,8 @@ void RRSVM_accGradParameters(THFloatTensor *input, THLongTensor * indices, THFlo
 
   THFloatTensor_zero(gradS);
 
-  THFloatTensor *input_d_h_w = THFloatTensor_new();
-  THFloatTensor *input_h_w = THFloatTensor_new();
+//  THFloatTensor *input_d_h_w = THFloatTensor_new();
+//  THFloatTensor *input_h_w = THFloatTensor_new();
 
    real /**input_data,*/ *output_data, *gradS_data;
   long *indices_data;
@@ -258,14 +268,16 @@ void RRSVM_accGradParameters(THFloatTensor *input, THLongTensor * indices, THFlo
   indices_data = THLongTensor_data(indices);
   gradS_data = THFloatTensor_data(gradS);
 long elt;
-//#pragma omp parallel for private(elt)
+#pragma omp parallel for private(elt)
    for ( elt = 0; elt < batchSize; elt ++) {
     // Matrix mulitply per output:
+    THFloatTensor *input_d_h_w = THFloatTensor_new();
     THFloatTensor_select(input_d_h_w, input, 0, elt);
 //    THFloatTensor_select(gradoutput_d_h_w, gradOutput, 0, elt);
 
 
         for (int chl = 0; chl < nInputPlane; chl ++){
+        THFloatTensor *input_h_w = THFloatTensor_new();
             THFloatTensor_select(input_h_w, input_d_h_w, 0, chl);
 //            THFloatTensor_select(gradoutput_h_w, gradoutput_d_h_w, 0, chl);
 //            THFloatTensor_select(s_h_w_1d, gradS, 0, chl);
@@ -289,13 +301,14 @@ long elt;
                 }
             }
             THFloatTensor_free(columns);
+            THFloatTensor_free(input_h_w);
     }
-
+    THFloatTensor_free(input_d_h_w);
   }
   // Resize back
   // Free
-  THFloatTensor_free(input_d_h_w);
-  THFloatTensor_free(input_h_w);
+//  THFloatTensor_free(input_d_h_w);
+//  THFloatTensor_free(input_h_w);
   THFloatTensor_free(input);
   THFloatTensor_free(gradOutput);
   THLongTensor_free(indices);
