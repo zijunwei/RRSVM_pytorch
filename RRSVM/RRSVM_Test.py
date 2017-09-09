@@ -109,10 +109,10 @@ if __name__ == '__main__':
     input = (Variable(torch.FloatTensor(torch.randn(1, 3, 6, 6)), requires_grad=True),
              Variable(torch.FloatTensor(torch.randn(3, 9)), requires_grad=True),)
     # test_gradient(input)
-    test_forward(input, kernel_size=3, padding=0, stride=3)
+    # test_forward(input, kernel_size=3, padding=0, stride=3)
     output, output_indices = get_numerical_output(*input,kernel_size=3, padding=0, stride=3)
-    print "Input\n"
-    print input
-    print 'Output\n'
-    print output
-    test_gradient(input, kernel_size=3, padding=0, stride=3)
+    # print "Input\n"
+    # print input
+    # print 'Output\n'
+    # print output
+    test_gradient(input, kernel_size=3, padding=0, stride=1)

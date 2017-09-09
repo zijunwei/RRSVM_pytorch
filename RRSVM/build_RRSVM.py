@@ -25,7 +25,9 @@ ffi = create_extension(
     sources=sources,
     define_macros=defines,
     relative_to=__file__,
-    with_cuda=with_cuda
+    with_cuda=with_cuda,
+    extra_compile_args=['-fopenmp'],
+    extra_link_args=["-fopenmp"]
 )
 
 if __name__ == '__main__':
