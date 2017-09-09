@@ -106,9 +106,10 @@ def pad2d(array2d, padding):
 
 if __name__ == '__main__':
     # test_gradient()
-    input = (Variable(torch.FloatTensor(torch.randn(1, 1, 6, 6)), requires_grad=True),
-             Variable(torch.FloatTensor(torch.randn(1, 9)), requires_grad=True),)
+    input = (Variable(torch.FloatTensor(torch.randn(1, 3, 6, 6)), requires_grad=True),
+             Variable(torch.FloatTensor(torch.randn(3, 9)), requires_grad=True),)
     # test_gradient(input)
+    test_forward(input, kernel_size=3, padding=0, stride=3)
     output, output_indices = get_numerical_output(*input,kernel_size=3, padding=0, stride=3)
     print "Input\n"
     print input

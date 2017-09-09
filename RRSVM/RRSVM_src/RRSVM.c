@@ -94,6 +94,7 @@ void RRSVM_updateOutput(THFloatTensor *input, THFloatTensor *s, THFloatTensor *o
   indices_data = THLongTensor_data(indices);
   s_data = THFloatTensor_data(s);
 
+#pragma omp parallel for private(elt)
    for (int elt = 0; elt < batchSize; elt ++) {
     THFloatTensor_select(input_d_h_w, input, 0, elt);
 
@@ -178,6 +179,7 @@ void RRSVM_updateGradInput(THFloatTensor *s, THLongTensor *indices, THFloatTenso
   s_data = THFloatTensor_data(s);
   indices_data = THLongTensor_data(indices);
 
+#pragma omp parallel for private(elt)
    for (int elt = 0; elt < batchSize; elt ++) {
     // Matrix mulitply per output:
     THFloatTensor_select(gradinput_d_h_w, gradInput, 0, elt);
@@ -255,6 +257,7 @@ void RRSVM_accGradParameters(THFloatTensor *input, THLongTensor * indices, THFlo
   indices_data = THLongTensor_data(indices);
   gradS_data = THFloatTensor_data(gradS);
 
+#pragma omp parallel for private(elt)
    for (int elt = 0; elt < batchSize; elt ++) {
     // Matrix mulitply per output:
     THFloatTensor_select(input_d_h_w, input, 0, elt);
