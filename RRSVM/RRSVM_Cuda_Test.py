@@ -5,9 +5,9 @@ import torch
 # from torch.autograd import gradcheck
 from MyGradCheck import gradcheck
 import numpy as np
+import sys
 
-# TODO: May be you need the S to be 2D ...
-# TODO: Think about padding case with zero
+
 
 
 def test_gradient(input, kernel_size=3, padding=0, stride=1):
@@ -114,6 +114,14 @@ if __name__ == '__main__':
     feature_size = 20
     input = (Variable(torch.FloatTensor(torch.randn(1, n_channel, feature_size, feature_size)), requires_grad=True),
              Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size**2)), requires_grad=True),)
+
+    if torch.cuda.is_available():
+        input = [i.cuda() for i in input]
+    else:
+        print("Cuda device not detected on this device")
+        sys.exit(-1)
+
+
     # test_gradient(input)
     # test_forward(input, kernel_size=3, padding=0, stride=3)
     # output, output_indices = get_numerical_output(*input,kernel_size=3, padding=0, stride=3)
@@ -121,5 +129,6 @@ if __name__ == '__main__':
     # print input
     # print 'Output\n'
     # print output
+
     test_forward(input, kernel_size=kernel_size, padding=0, stride=kernel_size, dilation=1)
     test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)

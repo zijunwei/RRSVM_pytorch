@@ -14,7 +14,7 @@ class RRSVM_F(torch.autograd.Function):
         self.stride = stride
         self.dilation = dilation
         # TODO: GPU currently not implemented
-        self.GPU_implemented = False
+        self.GPU_implemented = True
 
     def forward(self, input, s):
 
@@ -57,9 +57,9 @@ class RRSVM_F(torch.autograd.Function):
             RRSVM.RRSVM_updateOutput(input, s, output, indices, self.kernel_size, self.kernel_size, self.stride, self.stride,
                                            self.padding, self.padding, self.dilation, self.dilation)
         else:
-            raise NotImplementedError
-            # TODO: 1. change to cpu and change back
-            # TODO: 2. Implement cuda version
+            RRSVM.RRSVM_updateOutput_cuda(input, s, output, indices, self.kernel_size, self.kernel_size, self.stride, self.stride,
+                                           self.padding, self.padding, self.dilation, self.dilation)
+            # raise NotImplementedError
         return output, indices
 
     def _grad_input(self, input, s, indices, grad_output):
@@ -69,8 +69,9 @@ class RRSVM_F(torch.autograd.Function):
                                               self.kernel_size, self.kernel_size, self.stride, self.stride, self.padding, self.padding,
                                               self.dilation, self.dilation)
         else:
-            raise NotImplementedError
-
+            RRSVM.RRSVM_updateGradInput_cuda(s, indices, grad_output, grad_input, input.size(3), input.size(2),
+                                              self.kernel_size, self.kernel_size, self.stride, self.stride, self.padding, self.padding,
+                                              self.dilation, self.dilation)
         return grad_input
 
     def _grad_params(self, input, s, indices, grad_output):
@@ -81,7 +82,9 @@ class RRSVM_F(torch.autograd.Function):
                                                 self.stride, self.stride, self.padding, self.padding,
                                                 self.dilation, self.dilation)
         else:
-            raise NotImplementedError
+            RRSVM.RRSVM_accGradParameters_cuda(input, indices, grad_output, grad_s, self.kernel_size, self.kernel_size,
+                                                self.stride, self.stride, self.padding, self.padding,
+                                                self.dilation, self.dilation)
         return grad_s
 
     def _output_size(self, input, s):
@@ -145,8 +148,12 @@ class RRSVM_Module(torch.nn.Module):
     def param_loss(self, loss_fn):
         return loss_fn(self.s)
 
-def RRSVM_L1Loss(net, loss_fn):
+def RRSVM_Loss(net):
     loss = 0
+    #TODO: The following types of losses:
+    #1. Non-Negative
+    #2. L2 norm might not be good, because we want different feature map to have different weights
+    #3. Non-incremental
     for id, s_module in enumerate(net.modules()):
         if isinstance(s_module, RRSVM):
           loss += loss_fn(s_module.s)

@@ -146,9 +146,10 @@ def gradcheck(func, inputs, eps=1e-6, atol=1e-5, rtol=1e-3):
         # print numerical
         for k,  (a, n) in enumerate(zip(analytical, numerical)):
             relative_loss = (a - n) / (n + eps)
-            print relative_loss
+            # print relative_loss
             if not ((a - n).abs() <= (atol + rtol * n.abs())).all():
-                 print "{:d}th Input Grad is problematic".format(i)
+                 print "{:d}th Input Grad is problematic, max diff:{:.06f}".format(i, min((a-n).abs()))
+
                  Flag = False
             # else:
             #     print "{:d}th Input Grad is None problematic".format(i)

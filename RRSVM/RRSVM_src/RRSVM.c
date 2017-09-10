@@ -274,14 +274,11 @@ long elt;
     THFloatTensor *input_d_h_w = THFloatTensor_new();
     THFloatTensor_select(input_d_h_w, input, 0, elt);
 //    THFloatTensor_select(gradoutput_d_h_w, gradOutput, 0, elt);
-
-
         for (int chl = 0; chl < nInputPlane; chl ++){
         THFloatTensor *input_h_w = THFloatTensor_new();
             THFloatTensor_select(input_h_w, input_d_h_w, 0, chl);
 //            THFloatTensor_select(gradoutput_h_w, gradoutput_d_h_w, 0, chl);
 //            THFloatTensor_select(s_h_w_1d, gradS, 0, chl);
-
 //            THFloatTensor_resize3d(input_h_w, 1, inputHeight, inputWidth);
             THFloatTensor * columns = THFloatTensor_newWithSize2d(1*kW*kH, outputHeight*outputWidth);
 
@@ -305,10 +302,7 @@ long elt;
     }
     THFloatTensor_free(input_d_h_w);
   }
-  // Resize back
-  // Free
-//  THFloatTensor_free(input_d_h_w);
-//  THFloatTensor_free(input_h_w);
+
   THFloatTensor_free(input);
   THFloatTensor_free(gradOutput);
   THLongTensor_free(indices);
