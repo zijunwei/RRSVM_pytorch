@@ -48,7 +48,9 @@ def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
         print "Ouput Pass Foward Test"
 
     relative_loss = (numerical - analytical) / (numerical + 1e-6)
-    print relative_loss
+    print "Max Diff: {:.04f}".format((np.abs(relative_loss).max()))
+
+
     if not (np.absolute(numerical_indices - analytical_indices) <= (atol + rtol * np.absolute(numerical_indices))).all():
         print "Indices Failed Foward Test"
     else:
@@ -120,22 +122,11 @@ def pad2d(array2d, padding):
 
 if __name__ == '__main__':
     # test_gradient()
-    kernel_size = 3
-    n_channel = 1
-    feature_size = 10
+    kernel_size = 2
+    n_channel = 10
+    feature_size = 20
     input = (Variable(torch.FloatTensor(torch.randn(1, n_channel, feature_size, feature_size)), requires_grad=True),
              Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size**2)), requires_grad=True),)
 
-
-
-
-    # test_gradient(input)
-    # test_forward(input, kernel_size=3, padding=0, stride=3)
-    # output, output_indices = get_numerical_output(*input,kernel_size=3, padding=0, stride=3)
-    # print "Input\n"
-    # print input
-    # print 'Output\n'
-    # print output
-
     test_forward(input, kernel_size=kernel_size, padding=0, stride=kernel_size, dilation=1)
-    # test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)
+    test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)

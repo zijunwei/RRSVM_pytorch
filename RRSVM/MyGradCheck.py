@@ -1,6 +1,6 @@
 import torch
 from torch.autograd import Variable
-
+import numpy as np
 
 def iter_gradients(x):
     if isinstance(x, Variable):
@@ -52,9 +52,9 @@ def contiguous(input):
 def get_numerical_jacobian(fn, input, target, eps=1e-3):
     # To be able to use .view(-1) input must be contiguous
     input = contiguous(input)
-    output_size = fn(input).numel()
-    jacobian = make_jacobian(target, output_size)
-
+    output_elements = fn(input).numel()
+    jacobian = make_jacobian(target, output_elements)
+    output_size = fn(input).size()
     # It's much easier to iterate over flattened lists of tensors.
     # These are reference to the same objects in jacobian, so any changes
     # will be reflected in it as well.
@@ -91,7 +91,7 @@ def get_analytical_jacobian(input, output):
         flat_grad_output.zero_()
         flat_grad_output[i] = 1
         zero_gradients(input)
-        output.backward(grad_output, retain_variables=True)
+        output.backward(grad_output, retain_graph=True)
         for jacobian_x, d_x in zip(jacobian, iter_gradients(input)):
             if d_x is None:
                 jacobian_x[:, i].zero_()
@@ -148,7 +148,7 @@ def gradcheck(func, inputs, eps=1e-6, atol=1e-5, rtol=1e-3):
             relative_loss = (a - n) / (n + eps)
             # print relative_loss
             if not ((a - n).abs() <= (atol + rtol * n.abs())).all():
-                 print "{:d}th Input Grad is problematic, max diff:{:.06f}".format(i, min((a-n).abs()))
+                 print "{:d}th Input Grad is problematic, max diff:{:.06f}".format(i, (np.abs((a-n).numpy()).max()))
 
                  Flag = False
             # else:

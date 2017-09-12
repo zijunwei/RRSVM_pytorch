@@ -18,9 +18,15 @@ void col2im(cudaStream_t stream, const float* data_col, const int channels,
 
 
 void fill_output(const float * sorted_input_1d_data, const float *s_data, int i, int j, int inner_product,
-int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, float *output_data, cudaStream_t stream);
+                 int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, float *output_data, cudaStream_t stream);
 void fill_indices(const long *sorted_index_1d_data, int i, int j, int inner_product,
-int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, long* indices_data, cudaStream_t stream);
+                  int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, long* indices_data, cudaStream_t stream);
+
+void fill_gradInput(const float * gradOutput_data, const float * s_data, const long * indices_data, int i, int j, int inner_product,
+                    int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, float *gradInputColumns_data, cudaStream_t stream);
+
+void fill_gradS(const float * gradOutput_data, const float * column_data, const long * indices_data, int i, int j, int inner_product,
+                int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, float *gradS_data, cudaStream_t stream);
 
 //void  RRSVM_updateOutput_cuda_laucher(const float *input, const float *s, float *output, long *indices,
 //    const long batchSize, const long nInputPlane, const long inputHeight, const long inputWidth,
@@ -36,9 +42,6 @@ int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputW
 //void  RRSVM_accGradParameters_cuda_laucher(
 //
 //  );
-
-
-
 
 
 #ifdef __cplusplus

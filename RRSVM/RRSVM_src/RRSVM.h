@@ -1,3 +1,4 @@
+
 void RRSVM_updateOutput(THFloatTensor *input, THFloatTensor *s, THFloatTensor *output, THLongTensor *indices,
     int kW, int kH,
     int dW, int dH,

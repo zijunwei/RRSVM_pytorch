@@ -1,0 +1,17 @@
+cmake_minimum_required(VERSION 3.8)
+project(RRSVM_src)
+
+set(CMAKE_CXX_STANDARD 11)
+include_directories(/home/zwei/anaconda2/envs/pytorch/lib/python2.7/site-packages/torch/lib/include)
+
+set(SOURCE_FILES
+        cuda/RRSVM_kernel.c
+        cuda/RRSVM_kernel.h
+        RRSVM.c
+        RRSVM.h
+        RRSVM_cuda.c
+        RRSVM_cuda.h
+        RRSVM_cuda_v2.0.c
+        RRSVM_singlethread.c)
+
+add_executable(RRSVM_src ${SOURCE_FILES})

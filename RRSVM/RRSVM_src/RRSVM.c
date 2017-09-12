@@ -3,14 +3,14 @@
 #define real float
 
 static void THNN_Floatim2col(const real* data_im, const int channels,
-      const int height, const int width, const int kernel_h, const int kernel_w,
+      const long height, const long width, const int kernel_h, const int kernel_w,
       const int pad_h, const int pad_w,
       const int stride_h, const int stride_w,
       const int dilation_h, const int dilation_w,
       real* data_col) {
-  const int height_col = (height + 2 * pad_h -
+  const long height_col = (height + 2 * pad_h -
                           (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
-  const int width_col = (width + 2 * pad_w -
+  const long width_col = (width + 2 * pad_w -
                          (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
   const int channels_col = channels * kernel_h * kernel_w;
   for (int c_col = 0; c_col < channels_col; ++c_col) {
@@ -30,16 +30,16 @@ static void THNN_Floatim2col(const real* data_im, const int channels,
 }
 
 static void THNN_Floatcol2im(const real* data_col, const int channels,
-      const int height, const int width,
-      const int output_height, const int output_width,
+      const long height, const long width,
+      const long output_height, const long output_width,
       const int kernel_h, const int kernel_w,
       const int pad_h, const int pad_w,
       const int stride_h, const int stride_w,
       const int dilation_h, const int dilation_w,
       real* data_im) {
   memset(data_im, 0, sizeof(real) * height * width * channels);
-  const int height_col = output_height;
-  const int width_col = output_width;
+  const long height_col = output_height;
+  const long width_col = output_width;
   const int channels_col = channels * kernel_h * kernel_w;
   for (int c_col = 0; c_col < channels_col; ++c_col) {
     int w_offset = c_col % kernel_w;
@@ -64,8 +64,8 @@ void RRSVM_updateOutput(THFloatTensor *input, THFloatTensor *s, THFloatTensor *o
     int padW, int padH,
     int dilationW, int dilationH){
 
-  int nInputPlane = s->size[0];
-  int nOutputPlane = s->size[0];
+  long nInputPlane = s->size[0];
+  long nOutputPlane = s->size[0];
 
   input = THFloatTensor_newContiguous(input);
 //  THFloatTensor_resize2d(s, nInputPlane, kW*kH);
@@ -160,7 +160,7 @@ void RRSVM_updateGradInput(THFloatTensor *s, THLongTensor *indices, THFloatTenso
     int padW, int padH,
     int dilationW, int dilationH ){
 
-  int nInputPlane = s->size[0];
+  long nInputPlane = s->size[0];
 
   s = THFloatTensor_newContiguous(s);
   gradOutput = THFloatTensor_newContiguous(gradOutput);
@@ -238,7 +238,7 @@ void RRSVM_accGradParameters(THFloatTensor *input, THLongTensor * indices, THFlo
     int padW, int padH,
     int dilationW, int dilationH){
 
-  int nInputPlane = input->size[1];
+  long nInputPlane = input->size[1];
 //  int nOutputPlane = input->size[1];
 
   input = THFloatTensor_newContiguous(input);
