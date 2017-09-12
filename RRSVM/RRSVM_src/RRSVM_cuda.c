@@ -1,5 +1,5 @@
 #include <THC/THC.h>
-#include "RRSVM_utils.h"
+#include "cuda/RRSVM_kernel.h"
 #include <stdio.h>
 extern THCState *state;
 #define real float
@@ -10,24 +10,27 @@ void RRSVM_updateOutput_cuda(THCudaTensor *input, THCudaTensor *s, THCudaTensor 
     int padW, int padH,
     int dilationW, int dilationH){
 
-
-  int nInputPlane = THCudaTensor_size(state, s, 0);
-
-  input = THCudaTensor_newContiguous(state, input);
-  s = THCudaTensor_newContiguous(state, s);
-
+  long nInputPlane = THCudaTensor_size(state, s, 0);
   long inputWidth   = THCudaTensor_size(state, input, 3);
   long inputHeight  = THCudaTensor_size(state, input, 2);
   long outputWidth  = (inputWidth + 2*padW - (dilationW * (kW - 1) + 1)) / dW + 1;
   long outputHeight = (inputHeight + 2*padH - (dilationH * (kH - 1) + 1)) / dH + 1;
 
-  long batchSize = input->size[0];
+  long batchSize = THCudaTensor_size(state, input, 0);
+
+  input = THCudaTensor_newContiguous(state, input);
+  s = THCudaTensor_newContiguous(state, s);
 
   THCudaTensor_resize4d(state, output, batchSize, nInputPlane, outputHeight, outputWidth);
   THCudaTensor_zero(state,output);
 
   THCudaLongTensor_resize5d(state, indices, batchSize, nInputPlane, outputHeight, outputWidth, kH * kW);
   THCudaLongTensor_zero(state, indices);
+
+
+
+
+
 
   real /**input_data,*/ *output_data, *s_data;
   long *indices_data;
@@ -37,6 +40,7 @@ void RRSVM_updateOutput_cuda(THCudaTensor *input, THCudaTensor *s, THCudaTensor 
   indices_data = THCudaLongTensor_data(state, indices);
   s_data = THCudaTensor_data(state, s);
   long elt;
+  cudaStream_t stream = THCState_getCurrentStream(state);
 
 
 
@@ -88,10 +92,12 @@ void RRSVM_updateOutput_cuda(THCudaTensor *input, THCudaTensor *s, THCudaTensor 
 //                        indices_data[elt*nInputPlane*outputHeight*outputWidth*kH*kW + chl*outputHeight*outputWidth*kH*kW + i * outputWidth*kH*kW + j*kH*kW + inner_product] =
 //                         sorted_index_1d_data[inner_product];
                     fill_output( sorted_input_1d_data, s_data,  i, j,  inner_product,  elt,
-                     chl,  kH,  kW,  nInputPlane,  outputHeight,  outputWidth,  output_data);
+                     chl,  kH,  kW,  nInputPlane,  outputHeight,  outputWidth,  output_data, stream);
                     fill_indices(sorted_index_1d_data,  i,  j,  inner_product,
- elt,  chl,  kH,  kW,  nInputPlane,  outputHeight,  outputWidth,  indices_data);
-                    printf("Hello World!\n");
+ elt,  chl,  kH,  kW,  nInputPlane,  outputHeight,  outputWidth,  indices_data, stream);
+
+
+//                    printf("Hello World!\n");
                      }
 
                       THCudaLongTensor_free(state, sorted_index_1d);
@@ -112,7 +118,7 @@ void RRSVM_updateOutput_cuda(THCudaTensor *input, THCudaTensor *s, THCudaTensor 
 //  THFloatTensor_free(input_h_w);
   THCudaTensor_free(state, input);
   THCudaTensor_free(state, s);
-    }
+ }
 
 void RRSVM_updateGradInput_cuda(THCudaTensor *s, THCudaLongTensor *indices, THCudaTensor *gradOutput, THCudaTensor *gradInput,
     int inputWidth, int inputHeight,

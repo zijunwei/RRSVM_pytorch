@@ -26,19 +26,30 @@ def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
     #          Variable(torch.FloatTensor(torch.randn(1, 9)), requires_grad=True),)
 
     F = RRSVM.RRSVM_F(kernel_size, padding, stride, dilation=1)
-    analytical, analytical_indices = F(*input)
-    analytical = analytical.data.numpy()
-    analytical_indices = analytical_indices.data.numpy()
+
     numerical, numerical_indices = get_numerical_output(*input, kernel_size=kernel_size, padding=padding, stride=stride, dilation=1)
+
+    if torch.cuda.is_available():
+        input = [i.cuda() for i in input]
+    else:
+        print("Cuda device not detected on this device")
+        sys.exit(-1)
+    analytical, analytical_indices = F(*input)
+    analytical = analytical.cpu().data.numpy()
+    analytical_indices = analytical_indices.cpu().data.numpy()
 
     atol = 1e-5
     rtol = 1e-3
+
+
     if not (np.absolute(numerical - analytical) <= (atol + rtol * np.absolute(numerical))).all():
         print "Output Failed Foward Test"
     else:
         print "Ouput Pass Foward Test"
 
-    if not (np.absolute(numerical - analytical) <= (atol + rtol * np.absolute(numerical))).all():
+    relative_loss = (numerical - analytical) / (numerical + 1e-6)
+    print relative_loss
+    if not (np.absolute(numerical_indices - analytical_indices) <= (atol + rtol * np.absolute(numerical_indices))).all():
         print "Indices Failed Foward Test"
     else:
         print "Indices Pass Foward Test"
@@ -110,16 +121,12 @@ def pad2d(array2d, padding):
 if __name__ == '__main__':
     # test_gradient()
     kernel_size = 3
-    n_channel = 3
-    feature_size = 20
+    n_channel = 1
+    feature_size = 10
     input = (Variable(torch.FloatTensor(torch.randn(1, n_channel, feature_size, feature_size)), requires_grad=True),
              Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size**2)), requires_grad=True),)
 
-    if torch.cuda.is_available():
-        input = [i.cuda() for i in input]
-    else:
-        print("Cuda device not detected on this device")
-        sys.exit(-1)
+
 
 
     # test_gradient(input)
@@ -131,4 +138,4 @@ if __name__ == '__main__':
     # print output
 
     test_forward(input, kernel_size=kernel_size, padding=0, stride=kernel_size, dilation=1)
-    test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)
+    # test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)

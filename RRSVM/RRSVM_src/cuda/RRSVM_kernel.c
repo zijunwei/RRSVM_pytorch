@@ -8,7 +8,7 @@ extern "C" {
 #include <stdio.h>
 #include <math.h>
 #include <float.h>
-#include "RRSVM_utils.h"
+#include "RRSVM_kernel.h"
 
 #define Dtype float
 #define Acctype float
@@ -19,6 +19,7 @@ const int CUDA_NUM_THREADS = 1024;
 
 #define CUDA_KERNEL_LOOP(i, n) \
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); i += blockDim.x * gridDim.x)
+
 
 
 inline int GET_BLOCKS(const int N)
@@ -158,20 +159,105 @@ void col2im(cudaStream_t stream, const Dtype* data_col, const int channels,
 //  THCudaCheck(cudaGetLastError());
 }
 
-
-void fill_output(const float * sorted_input_1d_data, const float *s_data, int i, int j, int inner_product,
+__global__ void fill_output_kernel(const float * sorted_input_1d_data, const float *s_data, int i, int j, int inner_product,
 int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, float *output_data){
-
      output_data[elt*nInputPlane*outputHeight*outputWidth + chl*outputHeight*outputWidth + i * outputWidth + j] +=
                    s_data[chl* kH *kW + inner_product] * sorted_input_1d_data[inner_product];
 
 }
-void fill_indices(const long *sorted_index_1d_data, int i, int j, int inner_product,
-int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, long* indices_data){
-               indices_data[elt*nInputPlane*outputHeight*outputWidth*kH*kW + chl*outputHeight*outputWidth*kH*kW + i * outputWidth*kH*kW + j*kH*kW + inner_product] =
+
+
+void fill_output(const float * sorted_input_1d_data, const float *s_data, int i, int j, int inner_product,
+int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, float *output_data, cudaStream_t stream){
+
+     const int kThreadsPerBlock = 1024;
+     const int output_size = 1;
+     cudaError_t err;
+     fill_output_kernel<<<(output_size + kThreadsPerBlock - 1) / kThreadsPerBlock, kThreadsPerBlock, 0, stream>>>(
+     sorted_input_1d_data, s_data,  i,  j,  inner_product,
+ elt,  chl,  kH,  kW,  nInputPlane,  outputHeight,  outputWidth, output_data
+     );
+    err = cudaGetLastError();
+    if(cudaSuccess != err)
+    {
+        fprintf( stderr, "cudaCheckError() failed : %s\n", cudaGetErrorString( err ) );
+        exit( -1 );
+    }
+
+}
+
+__global__ void fill_indices_kernel(const long *sorted_index_1d_data, int i, int j, int inner_product,
+int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, long* indices_data ){
+
+    indices_data[elt*nInputPlane*outputHeight*outputWidth*kH*kW + chl*outputHeight*outputWidth*kH*kW + i * outputWidth*kH*kW + j*kH*kW + inner_product] =
                      sorted_index_1d_data[inner_product];
 
 }
+
+void fill_indices(const long *sorted_index_1d_data, int i, int j, int inner_product,
+int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, long* indices_data, cudaStream_t stream){
+
+     const int kThreadsPerBlock = 1024;
+     const int output_size = 1;
+     cudaError_t err;
+     fill_indices_kernel<<<(output_size + kThreadsPerBlock - 1) / kThreadsPerBlock, kThreadsPerBlock, 0, stream>>>(
+     sorted_index_1d_data,  i,  j,  inner_product,
+ elt,  chl,  kH,  kW,  nInputPlane,  outputHeight,  outputWidth, indices_data
+     );
+    err = cudaGetLastError();
+    if(cudaSuccess != err)
+    {
+        fprintf( stderr, "cudaCheckError() failed : %s\n", cudaGetErrorString( err ) );
+        exit( -1 );
+    }
+
+}
+
+//__global__ void RRSVM_updateOutput_kernel(const int nthreads,
+//                                          const float* /*[kW*kH, nInputPlan*outputHeight*outputwidth]*/im_col,
+//                                          const float* /*[nInputPlan, kW*kH]*/ s,
+//                                          float * /*[nInputPlan, outputHeight, outputWidth]*/ output_data,
+//                                          long * /*[nInputPlan, outputHeight, outputWidth, kW*kH]*/indices,
+//                                          const long nInputPlane, const long outputHeight, const outputWidth,
+//                                          int kW, int kH,
+//                                          int dW, int dH,
+//                                          int padW, int padH,
+//                                          int dilationW, int dilationH)
+//{
+//    CUDA_KERNEL_LOOP(index, nthreads)
+//    {
+//        // (n, c, ph, pw) is an element in the pooled output
+//        int n = index;
+//    }
+//}
+
+
+//void  RRSVM_updateOutput_cuda_laucher(const float *input, const float *s, float *output, long *indices,
+//    const long batchSize, const long nInputPlane, const long inputHeight, const long inputWidth,
+//    const long outputHeight, const outputWidth,
+//    int kW, int kH,
+//    int dW, int dH,
+//    int padW, int padH,
+//    int dilationW, int dilationH, cudaStream_t stream){
+//
+//    const int kThreadsPerBlock = 1024;
+//    const int output_size =  nInputPlane * outputHeight * outputWidth;
+//    cudaError_t err;
+//
+//
+//    RRSVM_updateOutput_kernel<<<(output_size + kThreadsPerBlock - 1) / kThreadsPerBlock, kThreadsPerBlock, 0, stream>>>(
+//
+//    );
+//
+//    err = cudaGetLastError();
+//    if(cudaSuccess != err)
+//    {
+//        fprintf( stderr, "cudaCheckError() failed : %s\n", cudaGetErrorString( err ) );
+//        exit( -1 );
+//    }
+//
+//
+//    }
 
 #ifdef __cplusplus
 }
