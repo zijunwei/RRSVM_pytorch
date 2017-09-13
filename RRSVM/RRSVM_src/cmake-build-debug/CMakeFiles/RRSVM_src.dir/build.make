@@ -129,33 +129,9 @@ CMakeFiles/RRSVM_src.dir/RRSVM_cuda.c.o.provides: CMakeFiles/RRSVM_src.dir/RRSVM
 CMakeFiles/RRSVM_src.dir/RRSVM_cuda.c.o.provides.build: CMakeFiles/RRSVM_src.dir/RRSVM_cuda.c.o
 
 
-CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o: CMakeFiles/RRSVM_src.dir/flags.make
-CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o: ../RRSVM_cuda_v2.0.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building C object CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o   -c /home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_cuda_v2.0.c
-
-CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_cuda_v2.0.c > CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.i
-
-CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_cuda_v2.0.c -o CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.s
-
-CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o.requires:
-
-.PHONY : CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o.requires
-
-CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o.provides: CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o.requires
-	$(MAKE) -f CMakeFiles/RRSVM_src.dir/build.make CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o.provides.build
-.PHONY : CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o.provides
-
-CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o.provides.build: CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o
-
-
 CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o: CMakeFiles/RRSVM_src.dir/flags.make
 CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o: ../RRSVM_singlethread.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building C object CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building C object CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o   -c /home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_singlethread.c
 
 CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.i: cmake_force
@@ -177,13 +153,37 @@ CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o.provides: CMakeFiles/RRSVM_src.d
 CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o.provides.build: CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o
 
 
+CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o: CMakeFiles/RRSVM_src.dir/flags.make
+CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o: ../RRSVM_cuda_fast1.0.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building C object CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o   -c /home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_cuda_fast1.0.c
+
+CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_cuda_fast1.0.c > CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.i
+
+CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_cuda_fast1.0.c -o CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.s
+
+CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o.requires:
+
+.PHONY : CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o.requires
+
+CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o.provides: CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o.requires
+	$(MAKE) -f CMakeFiles/RRSVM_src.dir/build.make CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o.provides.build
+.PHONY : CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o.provides
+
+CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o.provides.build: CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o
+
+
 # Object files for target RRSVM_src
 RRSVM_src_OBJECTS = \
 "CMakeFiles/RRSVM_src.dir/cuda/RRSVM_kernel.c.o" \
 "CMakeFiles/RRSVM_src.dir/RRSVM.c.o" \
 "CMakeFiles/RRSVM_src.dir/RRSVM_cuda.c.o" \
-"CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o" \
-"CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o"
+"CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o" \
+"CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o"
 
 # External object files for target RRSVM_src
 RRSVM_src_EXTERNAL_OBJECTS =
@@ -191,8 +191,8 @@ RRSVM_src_EXTERNAL_OBJECTS =
 RRSVM_src: CMakeFiles/RRSVM_src.dir/cuda/RRSVM_kernel.c.o
 RRSVM_src: CMakeFiles/RRSVM_src.dir/RRSVM.c.o
 RRSVM_src: CMakeFiles/RRSVM_src.dir/RRSVM_cuda.c.o
-RRSVM_src: CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o
 RRSVM_src: CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o
+RRSVM_src: CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o
 RRSVM_src: CMakeFiles/RRSVM_src.dir/build.make
 RRSVM_src: CMakeFiles/RRSVM_src.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking C executable RRSVM_src"
@@ -206,8 +206,8 @@ CMakeFiles/RRSVM_src.dir/build: RRSVM_src
 CMakeFiles/RRSVM_src.dir/requires: CMakeFiles/RRSVM_src.dir/cuda/RRSVM_kernel.c.o.requires
 CMakeFiles/RRSVM_src.dir/requires: CMakeFiles/RRSVM_src.dir/RRSVM.c.o.requires
 CMakeFiles/RRSVM_src.dir/requires: CMakeFiles/RRSVM_src.dir/RRSVM_cuda.c.o.requires
-CMakeFiles/RRSVM_src.dir/requires: CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o.requires
 CMakeFiles/RRSVM_src.dir/requires: CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o.requires
+CMakeFiles/RRSVM_src.dir/requires: CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o.requires
 
 .PHONY : CMakeFiles/RRSVM_src.dir/requires
 

@@ -6,7 +6,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 set(CMAKE_DEPENDS_CHECK_C
   "/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM.c" "/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/cmake-build-debug/CMakeFiles/RRSVM_src.dir/RRSVM.c.o"
   "/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_cuda.c" "/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/cmake-build-debug/CMakeFiles/RRSVM_src.dir/RRSVM_cuda.c.o"
-  "/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_cuda_v2.0.c" "/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/cmake-build-debug/CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o"
+  "/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_cuda_fast1.0.c" "/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/cmake-build-debug/CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o"
   "/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_singlethread.c" "/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/cmake-build-debug/CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o"
   "/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/cuda/RRSVM_kernel.c" "/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/cmake-build-debug/CMakeFiles/RRSVM_src.dir/cuda/RRSVM_kernel.c.o"
   )

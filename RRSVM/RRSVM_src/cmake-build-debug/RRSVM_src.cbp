@@ -98,7 +98,7 @@
 		<Unit filename="/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_cuda.h">
 			<Option target="RRSVM_src"/>
 		</Unit>
-		<Unit filename="/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_cuda_v2.0.c">
+		<Unit filename="/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_cuda_fast1.0.c">
 			<Option target="RRSVM_src"/>
 		</Unit>
 		<Unit filename="/home/zwei/Dev/RRSVM_pytorch/RRSVM/RRSVM_src/RRSVM_singlethread.c">

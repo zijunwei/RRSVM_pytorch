@@ -1,1 +1,1 @@
-/usr/bin/cc -g   CMakeFiles/RRSVM_src.dir/cuda/RRSVM_kernel.c.o CMakeFiles/RRSVM_src.dir/RRSVM.c.o CMakeFiles/RRSVM_src.dir/RRSVM_cuda.c.o CMakeFiles/RRSVM_src.dir/RRSVM_cuda_v2.0.c.o CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o  -o RRSVM_src 
+/usr/bin/cc -g   CMakeFiles/RRSVM_src.dir/cuda/RRSVM_kernel.c.o CMakeFiles/RRSVM_src.dir/RRSVM.c.o CMakeFiles/RRSVM_src.dir/RRSVM_cuda.c.o CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o  -o RRSVM_src 

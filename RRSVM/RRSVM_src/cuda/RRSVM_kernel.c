@@ -282,6 +282,81 @@ void fill_gradS(const float * gradOutput_data, const float * column_data, const 
 }
 
 
+//faster version:
+
+__global__ void fill_output2d_kernel(const int n, const float * sorted_input_2d_data, const float *s_data,
+                                   int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, float *output_data){
+
+    CUDA_KERNEL_LOOP(index, n){
+        Acctype val = 0;
+        for (int i = 0; i < kH*kW; ++i) {
+            val += s_data[chl * kH * kW + i] * sorted_input_2d_data[index+ i*outputHeight*outputWidth];
+        }
+        output_data[elt * nInputPlane * outputHeight * outputWidth + chl * outputHeight * outputWidth + index] = to(val);
+    }
+    //DEBUG
+//    printf("output_data: %d : %f\n", inner_product,
+//           output_data[elt*nInputPlane*outputHeight*outputWidth + chl*outputHeight*outputWidth + i * outputWidth + j]);
+}
+
+void fill_output_2d(const float * sorted_input_2d_data, const float *s_data,
+                    int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, float *output_data, cudaStream_t stream){
+    const int kThreadsPerBlock = 1024;
+    const int output_size = outputHeight * outputWidth;
+    cudaError_t err;
+    fill_output2d_kernel<<<(output_size + kThreadsPerBlock - 1) / kThreadsPerBlock, kThreadsPerBlock, 0, stream>>>(output_size,
+            sorted_input_2d_data, s_data,
+            elt,  chl,  kH,  kW,  nInputPlane,  outputHeight,  outputWidth, output_data
+    );
+    err = cudaGetLastError();
+    if(cudaSuccess != err)
+    {
+        fprintf( stderr, "cudaCheckError() failed : %s\n", cudaGetErrorString( err ) );
+        exit( -1 );
+    }
+
+
+
+}
+
+__global__ void fill_indices2d_kernel(const int n, const long * sorted_index_2d_data,
+                                     int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, long *indices_data){
+
+    CUDA_KERNEL_LOOP(index, n){
+
+        for (int i = 0; i < kH*kW; ++i) {
+            indices_data[elt * nInputPlane * outputHeight * outputWidth*kH*kW + chl * outputHeight * outputWidth*kH*kW + index*kH*kW + i] =
+                    sorted_index_2d_data[i*outputHeight*outputWidth + index];
+
+        }
+    }
+    //DEBUG
+//    printf("output_data: %d : %f\n", inner_product,
+//           output_data[elt*nInputPlane*outputHeight*outputWidth + chl*outputHeight*outputWidth + i * outputWidth + j]);
+}
+
+
+void fill_indices_2d(const long *sorted_index_2d_data,
+                     int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, long* indices_data, cudaStream_t stream){
+    const int kThreadsPerBlock = 1024;
+    const int output_size = outputHeight * outputWidth;
+    cudaError_t err;
+    fill_indices2d_kernel<<<(output_size + kThreadsPerBlock - 1) / kThreadsPerBlock, kThreadsPerBlock, 0, stream>>>(output_size,
+            sorted_index_2d_data,
+            elt,  chl,  kH,  kW,  nInputPlane,  outputHeight,  outputWidth, indices_data
+    );
+    err = cudaGetLastError();
+    if(cudaSuccess != err)
+    {
+        fprintf( stderr, "cudaCheckError() failed : %s\n", cudaGetErrorString( err ) );
+        exit( -1 );
+    }
+
+
+}
+
+
+
 //__global__ void RRSVM_updateOutput_kernel(const int nthreads,
 //                                          const float* /*[kW*kH, nInputPlan*outputHeight*outputwidth]*/im_col,
 //                                          const float* /*[nInputPlan, kW*kH]*/ s,

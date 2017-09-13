@@ -29,13 +29,12 @@ def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
 
     F = RRSVM.RRSVM_F(kernel_size, padding, stride, dilation=1)
 
-    numerical, numerical_indices = get_numerical_output(*input, kernel_size=kernel_size, padding=padding, stride=stride, dilation=1)
 
-    if torch.cuda.is_available():
-        input = [i.cuda() for i in input]
-    else:
-        print("Cuda device not detected on this device")
-        sys.exit(-1)
+    # if torch.cuda.is_available():
+    #     input = [i.cuda() for i in input]
+    # else:
+    #     print("Cuda device not detected on this device")
+    #     sys.exit(-1)
 
 
     analytical, analytical_indices = F(*input)
@@ -44,6 +43,11 @@ def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
 
     atol = 1e-5
     rtol = 1e-3
+
+    if torch.cuda.is_available():
+        input = [i.cpu() for i in input]
+
+    numerical, numerical_indices = get_numerical_output(*input, kernel_size=kernel_size, padding=padding, stride=stride, dilation=1)
 
 
     if not (np.absolute(numerical - analytical) <= (atol + rtol * np.absolute(numerical))).all():
@@ -121,12 +125,12 @@ def pad2d(array2d, padding):
 
 if __name__ == '__main__':
     # test_gradient()
-    kernel_size = 2
-    n_channel = 1
-    feature_size = 2
+    kernel_size = 3
+    n_channel = 10
+    feature_size = 15
 
     input = (Variable(torch.FloatTensor(torch.randn(1, n_channel, feature_size, feature_size)).cuda(), requires_grad=True),
              Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size**2)).cuda(), requires_grad=True),)
     # print input
-    # test_forward(input, kernel_size=kernel_size, padding=0, stride=kernel_size, dilation=1)
-    test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)
+    test_forward(input, kernel_size=kernel_size, padding=0, stride=kernel_size, dilation=1)
+    # test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)
