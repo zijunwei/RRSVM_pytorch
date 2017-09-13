@@ -129,8 +129,11 @@ if __name__ == '__main__':
     n_channel = 2
     feature_size = 4
     torch.cuda.set_device(0)
+    torch.manual_seed(0)
+
+
     input = (Variable(torch.FloatTensor(torch.randn(1, n_channel, feature_size, feature_size)).cuda(), requires_grad=True),
              Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size**2)).cuda(), requires_grad=True),)
     # print input
-    # test_forward(input, kernel_size=kernel_size, padding=0, stride=kernel_size, dilation=1)
+    test_forward(input, kernel_size=kernel_size, padding=0, stride=kernel_size, dilation=1)
     test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)

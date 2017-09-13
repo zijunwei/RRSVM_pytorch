@@ -204,6 +204,33 @@ RRSVM_cuda_fast1.0.c.s:
 	$(MAKE) -f CMakeFiles/RRSVM_src.dir/build.make CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.s
 .PHONY : RRSVM_cuda_fast1.0.c.s
 
+RRSVM_cuda_fast2.0.o: RRSVM_cuda_fast2.0.c.o
+
+.PHONY : RRSVM_cuda_fast2.0.o
+
+# target to build an object file
+RRSVM_cuda_fast2.0.c.o:
+	$(MAKE) -f CMakeFiles/RRSVM_src.dir/build.make CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast2.0.c.o
+.PHONY : RRSVM_cuda_fast2.0.c.o
+
+RRSVM_cuda_fast2.0.i: RRSVM_cuda_fast2.0.c.i
+
+.PHONY : RRSVM_cuda_fast2.0.i
+
+# target to preprocess a source file
+RRSVM_cuda_fast2.0.c.i:
+	$(MAKE) -f CMakeFiles/RRSVM_src.dir/build.make CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast2.0.c.i
+.PHONY : RRSVM_cuda_fast2.0.c.i
+
+RRSVM_cuda_fast2.0.s: RRSVM_cuda_fast2.0.c.s
+
+.PHONY : RRSVM_cuda_fast2.0.s
+
+# target to generate assembly for a file
+RRSVM_cuda_fast2.0.c.s:
+	$(MAKE) -f CMakeFiles/RRSVM_src.dir/build.make CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast2.0.c.s
+.PHONY : RRSVM_cuda_fast2.0.c.s
+
 RRSVM_singlethread.o: RRSVM_singlethread.c.o
 
 .PHONY : RRSVM_singlethread.o
@@ -276,6 +303,9 @@ help:
 	@echo "... RRSVM_cuda_fast1.0.o"
 	@echo "... RRSVM_cuda_fast1.0.i"
 	@echo "... RRSVM_cuda_fast1.0.s"
+	@echo "... RRSVM_cuda_fast2.0.o"
+	@echo "... RRSVM_cuda_fast2.0.i"
+	@echo "... RRSVM_cuda_fast2.0.s"
 	@echo "... RRSVM_singlethread.o"
 	@echo "... RRSVM_singlethread.i"
 	@echo "... RRSVM_singlethread.s"
