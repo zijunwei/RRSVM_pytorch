@@ -11,6 +11,7 @@ void RRSVM_updateOutput_cuda(THCudaTensor *input, THCudaTensor *s, THCudaTensor 
                              int dW, int dH,
                              int padW, int padH,
                              int dilationW, int dilationH){
+//    printf("RRSVM_updateOutput_cuda called\n");
 
     long nInputPlane = THCudaTensor_size(state, s, 0);
     long inputWidth   = THCudaTensor_size(state, input, 3);
@@ -38,7 +39,8 @@ void RRSVM_updateOutput_cuda(THCudaTensor *input, THCudaTensor *s, THCudaTensor 
     s_data = THCudaTensor_data(state, s);
     long elt;
     cudaStream_t stream = THCState_getCurrentStream(state);
-#pragma omp parallel for private(elt)
+
+//#pragma omp parallel for private(elt)
 
     for (elt = 0; elt < batchSize; elt ++) {
         THCudaTensor *input_d_h_w = THCudaTensor_new(state);
@@ -98,6 +100,7 @@ void RRSVM_updateGradInput_cuda(THCudaTensor *s, THCudaLongTensor *indices, THCu
                                 int dW, int dH,
                                 int padW, int padH,
                                 int dilationW, int dilationH){
+//    printf("RRSVM_updateGradInput_cuda called\n");
 
     int nInputPlane = THCudaTensor_size(state, s, 0);
 
@@ -124,7 +127,7 @@ void RRSVM_updateGradInput_cuda(THCudaTensor *s, THCudaLongTensor *indices, THCu
     long elt;
     cudaStream_t stream = THCState_getCurrentStream(state);
 
-#pragma omp parallel for private(elt)
+//#pragma omp parallel for private(elt)
     for ( elt = 0; elt < batchSize; elt ++) {
         // Matrix mulitply per output:
         THCudaTensor *gradinput_d_h_w = THCudaTensor_new(state);
@@ -145,9 +148,10 @@ void RRSVM_updateGradInput_cuda(THCudaTensor *s, THCudaLongTensor *indices, THCu
             {
                 for(j = 0; j < outputWidth; j ++)
                 {
-//                    index = i * outputWidth + j;
                     for (inner_product = 0; inner_product < kW * kH; inner_product ++){
+
                     fill_gradInput(gradOutput_data, s_data, indices_data, i, j, inner_product, elt, chl, kH, kW, nInputPlane, outputHeight, outputWidth, gradInputColumns_data, stream);
+
                     }
                 }
             }
@@ -173,7 +177,7 @@ void RRSVM_accGradParameters_cuda(THCudaTensor *input, THCudaLongTensor * indice
                                   int padW, int padH,
                                   int dilationW, int dilationH){
 
-
+//    printf("RRSVM_accGradParameters_cuda called\n");
     int nInputPlane = THCudaTensor_size(state, input, 1);
 //  int nOutputPlane = input->size[1];
 
@@ -206,11 +210,19 @@ void RRSVM_accGradParameters_cuda(THCudaTensor *input, THCudaLongTensor * indice
     long elt;
     cudaStream_t stream = THCState_getCurrentStream(state);
 
-#pragma omp parallel for private(elt)
+//#pragma omp parallel for private(elt)
     for ( elt = 0; elt < batchSize; elt ++) {
         // Matrix mulitply per output:
+
         THCudaTensor *input_d_h_w = THCudaTensor_new(state);
+//        THCudaTensor *output_d_h_w = THCudaTensor_new(state);
+//        THCudaLongTensor *indices_d_h_w = THCudaLongTensor_new(state);
+//
         THCudaTensor_select(state, input_d_h_w, input, 0, elt);
+//        THCudaTensor_select(state, input_d_h_w, output, 0, elt);
+//        THCudaTensor_select(state, input_d_h_w, input, 0, elt);
+
+
 //    THCudaTensor_select(gradoutput_d_h_w, gradOutput, 0, elt);
         for (int chl = 0; chl < nInputPlane; chl ++){
             THCudaTensor *input_h_w = THCudaTensor_new(state);
@@ -231,9 +243,9 @@ void RRSVM_accGradParameters_cuda(THCudaTensor *input, THCudaLongTensor * indice
             {
                 for(j = 0; j < outputWidth; j ++)
                 {
-//                    index = i * outputWidth + j;
                     for (inner_product = 0; inner_product < kW * kH; inner_product ++){
-                        fill_gradInput(gradOutput_data, column_data, indices_data, i, j, inner_product, elt, chl, kH, kW, nInputPlane, outputHeight, outputWidth, gradS_data, stream);
+                        fill_gradS(gradOutput_data, column_data, indices_data,
+                                   i, j, inner_product, elt, chl, kH, kW, nInputPlane, outputHeight, outputWidth, gradS_data, stream);
                     }
                 }
             }

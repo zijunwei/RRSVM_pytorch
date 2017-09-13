@@ -1,9 +1,9 @@
 import torchvision.models
-import RRSVM.RRSVM.RRSVM
+import RRSVM.RRSVM as RRSVM
 from torch.autograd import Variable
 import torch
 # from torch.autograd import gradcheck
-from RRSVM.RRSVM.MyGradCheck import gradcheck
+from RRSVM.Tests.MyGradCheck import gradcheck
 import numpy as np
 
 # TODO: May be you need the S to be 2D ...
@@ -12,7 +12,7 @@ import numpy as np
 
 def test_gradient(input, kernel_size=3, padding=0, stride=1):
 
-    F = RRSVM.RRSVM.RRSVM_F(kernel_size=kernel_size, padding=padding, stride=stride, dilation=1)
+    F = RRSVM.RRSVM_F(kernel_size=kernel_size, padding=padding, stride=stride, dilation=1)
 
     test = gradcheck(lambda i, s: F(i, s), inputs=input, eps=1e-3, atol=1e-3, rtol=1e-3)
     if test == True:
@@ -25,7 +25,7 @@ def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
     # input = (Variable(torch.FloatTensor(torch.randn(1, 1, 5, 5)), requires_grad=True),
     #          Variable(torch.FloatTensor(torch.randn(1, 9)), requires_grad=True),)
 
-    F = RRSVM.RRSVM.RRSVM_F(kernel_size, padding, stride, dilation=1)
+    F = RRSVM.RRSVM_F(kernel_size, padding, stride, dilation=1)
     analytical, analytical_indices = F(*input)
     analytical = analytical.data.numpy()
     analytical_indices = analytical_indices.data.numpy()
@@ -109,9 +109,9 @@ def pad2d(array2d, padding):
 
 if __name__ == '__main__':
     # test_gradient()
-    kernel_size = 3
-    n_channel = 3
-    feature_size = 20
+    kernel_size = 2
+    n_channel = 1
+    feature_size = 2
     input = (Variable(torch.FloatTensor(torch.randn(1, n_channel, feature_size, feature_size)), requires_grad=True),
              Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size**2)), requires_grad=True),)
     # test_gradient(input)

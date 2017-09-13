@@ -37,6 +37,7 @@ class RRSVM_F(torch.autograd.Function):
         return output, indices
 
     def backward(self, grad_output, _indices_grad=None):
+        # print "Backward called!\n"
         k = grad_output.dim()
         if k != 4:
             raise RuntimeError('Currently RRSVM only supports 2D convolution')
@@ -48,6 +49,9 @@ class RRSVM_F(torch.autograd.Function):
 
         grad_input = (self._grad_input(input, s, indices, grad_output) if self.needs_input_grad[0] else None)
         grad_s = (self._grad_params(input, s, indices, grad_output) if self.needs_input_grad[1] else None)
+        # print "Grad_input and grad_s in backward situation"
+        # print grad_input
+        # print grad_s
         return grad_input, grad_s
 
     def _update_output(self, input, s):
@@ -59,7 +63,7 @@ class RRSVM_F(torch.autograd.Function):
         else:
             RRSVM.RRSVM_updateOutput_cuda(input, s, output, indices, self.kernel_size, self.kernel_size, self.stride, self.stride,
                                            self.padding, self.padding, self.dilation, self.dilation)
-            # raise NotImplementedError
+
         return output, indices
 
     def _grad_input(self, input, s, indices, grad_output):
@@ -72,6 +76,8 @@ class RRSVM_F(torch.autograd.Function):
             RRSVM.RRSVM_updateGradInput_cuda(s, indices, grad_output, grad_input, input.size(3), input.size(2),
                                               self.kernel_size, self.kernel_size, self.stride, self.stride, self.padding, self.padding,
                                               self.dilation, self.dilation)
+            # grad_input = 0
+            # print grad_input
         return grad_input
 
     def _grad_params(self, input, s, indices, grad_output):
@@ -85,6 +91,7 @@ class RRSVM_F(torch.autograd.Function):
             RRSVM.RRSVM_accGradParameters_cuda(input, indices, grad_output, grad_s, self.kernel_size, self.kernel_size,
                                                 self.stride, self.stride, self.padding, self.padding,
                                                 self.dilation, self.dilation)
+            # print grad_s
         return grad_s
 
     def _output_size(self, input, s):

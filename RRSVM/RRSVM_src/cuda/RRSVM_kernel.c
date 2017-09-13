@@ -164,14 +164,16 @@ __global__ void fill_output_kernel(const int n, const float * sorted_input_1d_da
 
     output_data[elt*nInputPlane*outputHeight*outputWidth + chl*outputHeight*outputWidth + i * outputWidth + j] +=
             s_data[chl* kH *kW + inner_product] * sorted_input_1d_data[inner_product];
-
+    //DEBUG
+//    printf("output_data: %d : %f\n", inner_product,
+//           output_data[elt*nInputPlane*outputHeight*outputWidth + chl*outputHeight*outputWidth + i * outputWidth + j]);
 }
 
 
 void fill_output(const float * sorted_input_1d_data, const float *s_data, int i, int j, int inner_product,
                  int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, float *output_data, cudaStream_t stream){
 
-    const int kThreadsPerBlock = 1024;
+    const int kThreadsPerBlock = 1;
     const int output_size = 1;
     cudaError_t err;
     fill_output_kernel<<<(output_size + kThreadsPerBlock - 1) / kThreadsPerBlock, kThreadsPerBlock, 0, stream>>>(output_size,
@@ -193,12 +195,15 @@ __global__ void fill_indices_kernel(const int n, const long *sorted_index_1d_dat
     indices_data[elt*nInputPlane*outputHeight*outputWidth*kH*kW + chl*outputHeight*outputWidth*kH*kW + i * outputWidth*kH*kW + j*kH*kW + inner_product] =
             sorted_index_1d_data[inner_product];
 
+//    printf("Incides_data: %d : %ld\n", inner_product,
+//           indices_data[elt*nInputPlane*outputHeight*outputWidth*kH*kW + chl*outputHeight*outputWidth*kH*kW + i * outputWidth*kH*kW + j*kH*kW + inner_product]);
+
 }
 
 void fill_indices(const long *sorted_index_1d_data, int i, int j, int inner_product,
                   int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, long* indices_data, cudaStream_t stream){
 
-    const int kThreadsPerBlock = 1024;
+    const int kThreadsPerBlock = 1;
     const int output_size = 1;
     cudaError_t err;
     fill_indices_kernel<<<(output_size + kThreadsPerBlock - 1) / kThreadsPerBlock, kThreadsPerBlock, 0, stream>>>(output_size,
@@ -219,15 +224,17 @@ __global__ void fill_gradInput_kernel(const int n, const float * gradOutput_data
 
 
     long idx = indices_data[elt*nInputPlane*outputHeight*outputWidth*kH*kW + chl*outputHeight*outputWidth*kH*kW + i*outputWidth*kH*kW + j*kW*kH + inner_product];
-    gradInputColumns_data[idx*(outputWidth*outputHeight)+i*outputWidth + j] += s_data[chl*kW*kH+inner_product] * gradOutput_data[elt*nInputPlane*outputHeight*outputWidth + chl*outputHeight*outputWidth + i*outputWidth + j];
+    gradInputColumns_data[idx*(outputWidth*outputHeight)+i*outputWidth + j] +=
+            s_data[chl*kW*kH+inner_product] * gradOutput_data[elt*nInputPlane*outputHeight*outputWidth + chl*outputHeight*outputWidth + i*outputWidth + j];
 
-
+//    printf("GradInput: %ld, gradOutput: %f, s_data: %f\n",
+//           idx,   gradOutput_data[elt*nInputPlane*outputHeight*outputWidth + chl*outputHeight*outputWidth + i*outputWidth + j] ,s_data[chl*kW*kH+inner_product]);
 }
 
 void fill_gradInput(const float * gradOutput_data, const float * s_data, const long * indices_data, int i, int j, int inner_product,
                     int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, float *gradInputColumns_data, cudaStream_t stream){
 
-    const int kThreadsPerBlock = 1024;
+    const int kThreadsPerBlock = 1;
     const int output_size = 1;
     cudaError_t err;
 
@@ -259,7 +266,7 @@ __global__ void fill_gradS_kernel(const int n, const float * gradOutput_data, co
 void fill_gradS(const float * gradOutput_data, const float * column_data, const long * indices_data, int i, int j, int inner_product,
                 int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, float *gradS_data, cudaStream_t stream){
 
-    const int kThreadsPerBlock = 1024;
+    const int kThreadsPerBlock = 1;
     const int output_size = 1;
     cudaError_t err;
     fill_gradS_kernel<<<(output_size + kThreadsPerBlock - 1) / kThreadsPerBlock, kThreadsPerBlock, 0, stream>>>(output_size,
