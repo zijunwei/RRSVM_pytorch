@@ -29,11 +29,17 @@ void fill_gradS(const float * gradOutput_data, const float * column_data, const 
                 int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, float *gradS_data, cudaStream_t stream);
 
 
-
+//faster 1.0 interfaces
 void fill_output_2d(const float * sorted_input_2d_data, const float *s_data,
                  int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, float *output_data, cudaStream_t stream);
 void fill_indices_2d(const long *sorted_index_2d_data,
                   int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, long* indices_data, cudaStream_t stream);
+
+void fill_gradInput_2d(const float* gradOutput_data, const float * s_data, const long * indices_data,
+                       int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth, float * gradInputColumns_data,cudaStream_t stream);
+
+void fill_gradS_2d(const float * gradOutput_data, const float * column_data, const long * indices_data,
+        int elt, int chl, int kH, int kW, int nInputPlane, int outputHeight, int outputWidth,  float * gradS_data, cudaStream_t stream);
 
 
 
