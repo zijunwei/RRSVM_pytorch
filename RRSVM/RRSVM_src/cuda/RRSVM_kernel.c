@@ -30,7 +30,7 @@ inline int GET_BLOCKS(const int N)
 //template <typename In, typename Out>
 //struct ScalarConvert {
 //  static
-__host__ __device__ Out to(const In v) { return (Out) v; }
+__host__ __device__ Out to(const In v){ return (Out) v;}
 //};
 
 
@@ -451,7 +451,6 @@ __global__ void im3col_kernel(const int n, const Dtype* data_im,
         index /= width_col;
         int h_out = index % height_col;
         int channel_in = index / height_col;
-//        int channel_out = channel_in * ksize_h * ksize_w;
         int h_in = h_out * stride_h - pad_h;
         int w_in = w_out * stride_w - pad_w;
         data_col += (channel_in * height_col + h_out) * width_col + w_out;
@@ -501,18 +500,12 @@ __global__ void fill_output3d_kernel(const int n, const float * sorted_input_2d_
         Acctype val = 0;
         for (int i = 0; i < kH*kW; ++i) {
             val += s_data[chl * kH * kW + i] * sorted_input_2d_data[index + i * n];
-            indices_data[elt * nInputPlane * outputHeight * outputWidth*kH*kW + index*kH*kW + i] =
-                    sorted_index_2d_data[i*outputHeight*outputWidth*nInputPlane + index];
+            indices_data[elt * nInputPlane * outputHeight * outputWidth * kH * kW + index*kH*kW + i] =
+                    sorted_index_2d_data[index + i * n];
         }
 
         output_data[elt * nInputPlane * outputHeight * outputWidth + chl * outputHeight * outputWidth + offset ] = to(val);
 
-
-
-//        for (int i = 0; i < kH*kW; ++i) {
-
-
-//        }
     }
     //DEBUG
 //    printf("output_data: %d : %f\n", inner_product,
@@ -537,9 +530,6 @@ void fill_output_3d(const float * sorted_input_2d_data, const long*sorted_index_
     }
 
 
-
-
-
 }
 
 
@@ -554,7 +544,6 @@ __global__ void fill_gradInput3d_kernel(const int n, const float * gradOutput_da
         int oH_idx = (index / (kH * kW * outputWidth)) % outputHeight;
         int oW_idx = (index /(kH * kW)) % (outputWidth);
         int col = index % (kH * kW);
-//        * outputHeight * outputWidth);
 
         gradInputColumns_data[(chl * kH*kW + idx)*(outputWidth*outputHeight)+ oH_idx*outputWidth + oW_idx] =
                 s_data[chl*kW*kH+col] * gradOutput_data[elt*nInputPlane*outputHeight*outputWidth + chl*outputHeight*outputWidth + oH_idx*outputWidth + oW_idx];
@@ -597,7 +586,7 @@ __global__ void fill_gradS3d_kernel(const int n, const float * gradOutput_data, 
             val +=  column_data[(idx + chl * kH* kW) * outputHeight * outputWidth + i] *
                     gradOutput_data[elt * nInputPlane * outputHeight * outputWidth + chl * outputHeight * outputWidth + i];
         }
-        gradS_data[index] = to(val);
+        gradS_data[index] += to(val);
     }
 
 }

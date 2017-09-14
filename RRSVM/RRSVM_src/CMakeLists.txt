@@ -12,7 +12,6 @@ set(SOURCE_FILES
         RRSVM_cuda.c
         RRSVM_cuda.h
         RRSVM_singlethread.c
-        RRSVM_cuda_fast1.0.c
-        RRSVM_cuda_fast2.0.c)
+        RRSVM_cuda_faster.c)
 
 add_executable(RRSVM_src ${SOURCE_FILES})

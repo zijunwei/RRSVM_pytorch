@@ -141,7 +141,7 @@ def gradcheck(func, inputs, eps=1e-6, atol=1e-5, rtol=1e-3):
         def fn(input):
             return _as_tuple(func(*input))[i].data
         analytical = get_analytical_jacobian(_as_tuple(inputs), o)
-        print analytical
+        # print analytical
         numerical = get_numerical_jacobian(fn, inputs, inputs, eps)
         # print numerical
         for k,  (a, n) in enumerate(zip(analytical, numerical)):
@@ -150,8 +150,8 @@ def gradcheck(func, inputs, eps=1e-6, atol=1e-5, rtol=1e-3):
             if not ((a - n).abs() <= (atol + rtol * n.abs())).all():
                  print "{:d}th Input Grad is problematic, max diff:{:.06f}".format(k, (np.abs((a-n).numpy()).max()))
                  Flag = False
-            else:
-                print "{:d}th Input Grad is None problematic".format(k)
+            # else:
+                # print "{:d}th Input Grad is None problematic".format(k)
 
 
     # check if the backward multiplies by grad_output

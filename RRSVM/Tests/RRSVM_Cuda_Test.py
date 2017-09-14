@@ -17,11 +17,12 @@ def test_gradient(input, kernel_size=3, padding=0, stride=1):
     #     print("Cuda device not detected on this device")
     #     sys.exit(-1)
     test = gradcheck(lambda i, s: F(i, s), inputs=input, eps=1e-3, atol=1e-3, rtol=1e-3)
-    if test == True:
-        print("Gradient Check Passed!")
-    else:
-        print("Gradient Check Failed!")
-
+    # if test == True:
+    #     print("Gradient Check Passed!")
+    # else:
+    #     print("Gradient Check Failed!")
+    #
+    return test
 
 def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
     # input = (Variable(torch.FloatTensor(torch.randn(1, 1, 5, 5)), requires_grad=True),
@@ -49,22 +50,40 @@ def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
 
     numerical, numerical_indices = get_numerical_output(*input, kernel_size=kernel_size, padding=padding, stride=stride, dilation=1)
 
+    flag = True
 
     if not (np.absolute(numerical - analytical) <= (atol + rtol * np.absolute(numerical))).all():
-        print "Output Failed Foward Test"
-    else:
-        print "Ouput Pass Foward Test"
-
-    relative_loss = (numerical - analytical) / (numerical + 1e-6)
-    print "Max Diff: {:.04f}".format((np.abs(relative_loss).max()))
+        print "Update Output Error"
+        flag = False
+    #
+    # relative_loss = (numerical - analytical) / (numerical + 1e-6)
+    # print "Max Diff: {:.04f}".format((np.abs(relative_loss).max()))
 
 
     if not (np.absolute(numerical_indices - analytical_indices) <= (atol + rtol * np.absolute(numerical_indices))).all():
-        print "Indices Failed Foward Test"
-    else:
-        print "Indices Pass Foward Test"
+        print "Output Indices Error"
+        flag = False
+    return flag
+        # print "Indices Failed Foward Test"
+    # else:
+    #     print "Indices Pass Foward Test"
     # test = gradcheck(lambda i, s: F(i, s), inputs=input, eps=1e-6, atol=1e-4)
     # print "DONE"
+    # if not (np.absolute(numerical - analytical) <= (atol + rtol * np.absolute(numerical))).all():
+    #     print "Output Failed Foward Test"
+    # else:
+    #     print "Ouput Pass Foward Test"
+    #
+    # relative_loss = (numerical - analytical) / (numerical + 1e-6)
+    # print "Max Diff: {:.04f}".format((np.abs(relative_loss).max()))
+    #
+    #
+    # if not (np.absolute(numerical_indices - analytical_indices) <= (atol + rtol * np.absolute(numerical_indices))).all():
+    #     print "Indices Failed Foward Test"
+    # else:
+    #     print "Indices Pass Foward Test"
+    # # test = gradcheck(lambda i, s: F(i, s), inputs=input, eps=1e-6, atol=1e-4)
+    # # print "DONE"
 
 
 def get_numerical_output(input, s, kernel_size=3, padding=0, stride=1, dilation=1):
@@ -125,15 +144,31 @@ def pad2d(array2d, padding):
 
 if __name__ == '__main__':
     # test_gradient()
-    kernel_size = 2
-    n_channel = 2
-    feature_size = 4
-    torch.cuda.set_device(0)
-    torch.manual_seed(0)
+    # TODO:
+    # a list of observations:
+    # When padding is not zero, it will cause errors because there will be 3 zeros for the corner, the order is quite random
+    # when doing back propgation, the forward of the input will change the order, which will bring errors, but the forward of the s will not bring order change, so you will always see that the
+    # the error is always the first elements
+    for i in range(100):
+        kernel_size = 3
+        n_channel = 5
+        feature_size = 4
+        padding = 1
+        stride = 2
+        batch_size = 3
+        torch.cuda.set_device(0)
 
 
-    input = (Variable(torch.FloatTensor(torch.randn(1, n_channel, feature_size, feature_size)).cuda(), requires_grad=True),
-             Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size**2)).cuda(), requires_grad=True),)
-    # print input
-    test_forward(input, kernel_size=kernel_size, padding=0, stride=kernel_size, dilation=1)
-    test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)
+        input = (Variable(torch.FloatTensor(torch.randn(batch_size, n_channel, feature_size, feature_size)).cuda(), requires_grad=True),
+                 Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size**2)).cuda(), requires_grad=True),)
+        # print input
+        t_forward = test_forward(input, kernel_size=kernel_size, padding=padding, stride=stride, dilation=1)
+        t_backward = test_gradient(input, kernel_size=kernel_size, padding=padding, stride=stride)
+        back_flag = "Fail"
+        forward_flag = 'Fail'
+        if t_backward:
+            back_flag = "Pass"
+        if t_forward:
+            forward_flag = "Pass"
+
+        print "[{:03d} | {:03d}]\tFoward:{:s}; Backward:{:s}".format(i, 100, forward_flag, back_flag)

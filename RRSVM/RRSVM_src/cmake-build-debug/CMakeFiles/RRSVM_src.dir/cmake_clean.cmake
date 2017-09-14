@@ -3,8 +3,7 @@ file(REMOVE_RECURSE
   "CMakeFiles/RRSVM_src.dir/RRSVM.c.o"
   "CMakeFiles/RRSVM_src.dir/RRSVM_cuda.c.o"
   "CMakeFiles/RRSVM_src.dir/RRSVM_singlethread.c.o"
-  "CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast1.0.c.o"
-  "CMakeFiles/RRSVM_src.dir/RRSVM_cuda_fast2.0.c.o"
+  "CMakeFiles/RRSVM_src.dir/RRSVM_cuda_faster.c.o"
   "RRSVM_src.pdb"
   "RRSVM_src"
 )

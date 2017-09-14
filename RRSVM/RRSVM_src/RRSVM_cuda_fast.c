@@ -40,7 +40,7 @@ void RRSVM_updateOutput_cuda(THCudaTensor *input, THCudaTensor *s, THCudaTensor 
     int elt;
     cudaStream_t stream = THCState_getCurrentStream(state);
 
-#pragma omp parallel for private(elt)
+//#pragma omp parallel for private(elt)
 
     for (elt = 0; elt < batchSize; elt ++) {
         THCudaTensor *input_d_h_w = THCudaTensor_new(state);

@@ -14,7 +14,7 @@ extra_objects = []
 
 if torch.cuda.is_available():
     print('Including CUDA code.')
-    sources += ['RRSVM_src/RRSVM_cuda_fast2.0.c']
+    sources += ['RRSVM_src/RRSVM_cuda_faster.c']
     headers += ['RRSVM_src/RRSVM_cuda.h']
     defines += [('WITH_CUDA', None)]
     with_cuda = True
