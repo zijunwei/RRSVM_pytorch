@@ -1,7 +1,7 @@
 ## README:
 
 ### structure:
-The python interface is in `RRSVM.py`, the c backend is implemented in `RRSVM_src`, currently only float is supported
+The python interface is in `RRSVM.py`, the c backend is implemented in `RRSVM_src` in which the cuda code is in `cuda` directory, currently only float is supported
 
 ### Compile
 

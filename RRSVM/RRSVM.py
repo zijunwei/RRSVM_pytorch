@@ -140,7 +140,7 @@ class RRSVM_Module(torch.nn.Module):
         self.dilation = dilation
         self.s = Parameter(torch.Tensor(in_channels, self.kernel_size * self.kernel_size))
         # initialize s:
-        n_elt = in_channels * self.kernel_size * self.kernel_size
+        n_elt = self.kernel_size * self.kernel_size
         init_val = 1. / n_elt
         self.s.data.fill_(init_val)
 

@@ -20,7 +20,7 @@ from datasets.cifar10 import lenet
 from py_utils import dir_utils
 from pt_utils import t_sets
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
-parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
+parser.add_argument('--lr', default=0.01, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--model', default='OWA', help='Type of model')
 parser.add_argument("--gpu_id", default=None, type=int)
@@ -28,6 +28,8 @@ parser.add_argument("--gpu_id", default=None, type=int)
 args = parser.parse_args()
 model = {'OWA': lenet.LeNet_RRSVM, 'BASE': lenet.LeNet_Base}
 use_cuda = torch.cuda.is_available() and args.gpu_id is not None
+
+
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
@@ -69,8 +71,12 @@ if args.resume:
     # Load checkpoint.
     print('==> Resuming from checkpoint..')
     assert os.path.isfile(os.path.join(save_dir, 'ckpt.t7')), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load(os.path.join(save_dir, 'ckpt.t7'))
-    net = checkpoint['net']
+    checkpoint = torch.load(os.path.join(save_dir, 'ckpt.t7'), map_location=lambda storage, loc: storage)
+    net_struct = model[args.model.upper()]
+    net = net_struct()
+    state_dict = checkpoint['net']
+    net.load_state_dict(state_dict)
+
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
 else:
@@ -85,7 +91,8 @@ print ("Model:{:s}".format(args.model))
 
 if use_cuda:
     net.cuda()
-    net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
+
+    torch.cuda.set_device(args.gpu_id)
     cudnn.benchmark = True
 
 criterion = nn.CrossEntropyLoss()
@@ -99,9 +106,9 @@ def train(epoch):
     correct = 0
     total = 0
     total_n = 0
-    lr = args.lr * (0.1 ** (epoch // 50))
+    lr = args.lr * (0.01 ** (epoch // 50))
     t_sets.set_lr(optimizer, lr)
-    pbar = progressbar.ProgressBar(max_value=n_traindata//train_batch_size)
+    # pbar = progressbar.ProgressBar(max_value=n_traindata//train_batch_size)
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
@@ -113,10 +120,11 @@ def train(epoch):
         optimizer.step()
 
         train_loss += loss.data[0]
+        print("Trainloss: {:.02f}".format(loss.data[0]))
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
-        pbar.update(batch_idx)
+        # pbar.update(batch_idx)
         total_n = batch_idx + 1
     # Save checkpoint.
     t_acc = 100. * correct / total
@@ -165,7 +173,8 @@ def test(epoch):
     if t_acc > best_acc:
         print('Saving..')
         state = {
-            'net': net.module if use_cuda else net,
+            'net': net.state_dict(),
+            'optimizer': optimizer.state_dict(),
             'acc': t_acc,
             'loss': t_loss,
             'epoch': epoch,
@@ -173,7 +182,6 @@ def test(epoch):
 
         torch.save(state,  os.path.join(save_dir,'ckpt.t7'))
         best_acc = t_acc
-
 
 for epoch in range(start_epoch, start_epoch+200):
     train(epoch)
