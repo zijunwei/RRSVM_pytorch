@@ -1,18 +1,20 @@
 import torch
-from torch.nn.modules.utils import _pair
+# from torch.nn.modules.utils import _pair
 from torch.nn.parameter import Parameter
 from _ext import RRSVM
 import numpy as np
 from torch.autograd import Variable
-
+import torch.nn as nn
+import torch.nn.functional as Functional
 
 class RRSVM_F(torch.autograd.Function):
-    def __init__(self, kernel_size=3, padding=0, stride=1, dilation=1):
+    def __init__(self, kernel_size=3, padding=0, stride=1, dilation=1, return_indices=False):
         super(RRSVM_F, self).__init__()
         self.kernel_size = kernel_size
         self.padding = padding
         self.stride = stride
         self.dilation = dilation
+        self.return_indices = return_indices
         # TODO: GPU currently not implemented
         self.GPU_implemented = True
 
@@ -33,8 +35,9 @@ class RRSVM_F(torch.autograd.Function):
         output, indices = self._update_output(input, s)
         self.intermediate = (input, s, indices,)
         # self.save_for_backward(input, s)
-        self.mark_non_differentiable(indices)
-        return output, indices
+        if self.return_indices:
+            self.mark_non_differentiable(indices)
+        return (output, indices,) if self.return_indices else output
 
     def backward(self, grad_output, _indices_grad=None):
         # print "Backward called!\n"
@@ -132,10 +135,14 @@ class RRSVM_Module(torch.nn.Module):
     # comapred to convolution:
     # __init__(self, in_channels, out_channels, kernel_size, stride=1,
              # padding=0, dilation=1, groups=1, bias=True):
-    def __init__(self, in_channels, kernel_size, stride=1, padding=0, dilation=1):
+    def __init__(self, in_channels, kernel_size, stride=None, padding=0, dilation=1, p_constraint=False,return_indices=False):
         super(RRSVM_Module, self).__init__()
         self.kernel_size = kernel_size
-        self.stride = stride
+        if stride is not None:
+            self.stride = stride
+        else:
+            self.stride = kernel_size
+        self.return_indices = return_indices
         self.padding = padding
         self.dilation = dilation
         self.s = Parameter(torch.Tensor(in_channels, self.kernel_size * self.kernel_size))
@@ -143,9 +150,12 @@ class RRSVM_Module(torch.nn.Module):
         n_elt = self.kernel_size * self.kernel_size
         init_val = 1. / n_elt
         self.s.data.fill_(init_val)
-
+        self.p_constraint = p_constraint
     def forward(self, input):
-        F = RRSVM_F(self.kernel_size, self.padding, self.stride, self.dilation)
+        # if self.p_constraint:
+        #     self.s = Functional.relu(self.s)
+
+        F = RRSVM_F(self.kernel_size, self.padding, self.stride, self.dilation, self.return_indices)
         return F(input, self.s)
 
     def toggleFreeze(self):
@@ -166,6 +176,23 @@ def RRSVM_Loss(net):
           loss += loss_fn(s_module.s)
     return loss
 
+
+class RRSVM_PositiveClipper(object):
+    def __init__(self, frequency=1):
+        self.frequency = frequency
+
+    def __call__(self, module):
+        if hasattr(module, 's'):
+            s = module.s.data
+            s[s < 0] = 0
+
+class RRSVM_MonoClipper(object):
+    def __init__(self, frequency=100):
+        self.frequency = frequency
+
+    def __call__(self, module):
+        if hasattr(module, 's'):
+            raise NotImplementedError("MonoClipper Not Implemented!")
 
 if __name__ == '__main__':
     #TODO: TEST Starting HERE!

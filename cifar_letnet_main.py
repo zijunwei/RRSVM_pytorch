@@ -16,7 +16,7 @@ import argparse
 # from models import *
 import progressbar
 from torch.autograd import Variable
-from datasets.cifar10 import lenet
+from models.cifar import lenet
 from py_utils import dir_utils
 from pt_utils import t_sets
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
