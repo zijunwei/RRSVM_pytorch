@@ -2,7 +2,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import RRSVM.RRSVM as RRSVM
 
 from torch.autograd import Variable
 
@@ -10,7 +9,6 @@ from torch.autograd import Variable
 class Inception(nn.Module):
     def __init__(self, in_planes, n1x1, n3x3red, n3x3, n5x5red, n5x5, pool_planes):
         super(Inception, self).__init__()
-
         # 1x1 conv branch
         self.b1 = nn.Sequential(
             nn.Conv2d(in_planes, n1x1, kernel_size=1),
@@ -58,16 +56,18 @@ class Inception(nn.Module):
 
 
 class GoogLeNet(nn.Module):
-    def __init__(self, n_classes=10, useRRSVM=False):
+    def __init__(self, n_classes=10):
         super(GoogLeNet, self).__init__()
         self.pre_layers = nn.Sequential(
             nn.Conv2d(3, 192, kernel_size=3, padding=1),
             nn.BatchNorm2d(192),
             nn.ReLU(True),
         )
-        self.useRRSVM = useRRSVM
+
         self.a3 = Inception(192,  64,  96, 128, 16, 32, 32)
         self.b3 = Inception(256, 128, 128, 192, 32, 96, 64)
+
+        self.maxpool = nn.MaxPool2d(3, stride=2, padding=1)
 
         self.a4 = Inception(480, 192,  96, 208, 16,  48,  64)
         self.b4 = Inception(512, 160, 112, 224, 24,  64,  64)
@@ -78,52 +78,28 @@ class GoogLeNet(nn.Module):
         self.a5 = Inception(832, 256, 160, 320, 32, 128, 128)
         self.b5 = Inception(832, 384, 192, 384, 48, 128, 128)
 
-        if not self.useRRSVM:
-            self.pool1 = nn.MaxPool2d(3, stride=2, padding=1)
-            self.pool2 = nn.MaxPool2d(3, stride=2, padding=1)
-            self.pool3 = nn.AvgPool2d(8, stride=1)
-        else:
-            self.pool1 = RRSVM.RRSVM_Module(480, kernel_size=2, stride=2, return_indices=True)
-            self.pool2 = RRSVM.RRSVM_Module(832, kernel_size=2, stride=2, return_indices=True)
-            self.pool3 = RRSVM.RRSVM_Module(1024,kernel_size=8, stride=1, return_indices=True)
-
+        self.avgpool = nn.AvgPool2d(8, stride=1)
         self.linear = nn.Linear(1024, n_classes)
 
     def forward(self, x):
-        pool_indices = []
         out = self.pre_layers(x)
         out = self.a3(out)
         out = self.b3(out)
-        if self.useRRSVM:
-            out, p = self.pool1(out)
-            pool_indices.append(p)
-        else:
-            out = self.pool1(out)
+        out = self.maxpool(out)
         out = self.a4(out)
         out = self.b4(out)
         out = self.c4(out)
         out = self.d4(out)
         out = self.e4(out)
-        if self.useRRSVM:
-            out, p = self.pool2(out)
-            pool_indices.append(p)
-        else:
-            out = self.pool2(out)
+        out = self.maxpool(out)
         out = self.a5(out)
         out = self.b5(out)
-        if self.useRRSVM:
-            out, p = self.pool3(out)
-            pool_indices.append(p)
-        else:
-            out = self.pool3(out)
+        out = self.avgpool(out)
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
 
-
-if __name__ == '__main__':
-
-    net = GoogLeNet(useRRSVM=True)
-    x = torch.randn(1,3,32,32)
-    y = net(Variable(x))
-    print(y.size())
+# net = GoogLeNet()
+# x = torch.randn(1,3,32,32)
+# y = net(Variable(x))
+# print(y.size())

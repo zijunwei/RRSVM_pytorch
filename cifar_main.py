@@ -92,9 +92,9 @@ if args.net.lower() == 'vgg':
     net = vgg.VGG(args.model.upper(), n_classes=n_classes)
 elif args.net.lower() == 'inception':
     if args.model.upper() == "O_Master".upper():
-        net = inception.GoogLeNet(useRRSVM=True)
+        net = inception.GoogLeNet(n_classes=n_classes, useRRSVM=True)
     elif args.model.upper() == 'Orig'.upper():
-        net = inception.GoogLeNet(useRRSVM=False)
+        net = inception.GoogLeNet(n_classes=n_classes, useRRSVM=False)
     else:
         raise NotImplemented
 else:
