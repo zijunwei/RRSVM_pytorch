@@ -16,6 +16,7 @@ import progressbar
 from torch.autograd import Variable
 from models.cifar import vgg
 from models.cifar import inception
+from models.cifar import densenet
 from py_utils import dir_utils
 from pt_utils import t_sets
 import RRSVM.RRSVM as RRSVM
@@ -95,6 +96,13 @@ elif args.net.lower() == 'inception':
         net = inception.GoogLeNet(n_classes=n_classes, useRRSVM=True)
     elif args.model.upper() == 'Orig'.upper():
         net = inception.GoogLeNet(n_classes=n_classes, useRRSVM=False)
+    else:
+        raise NotImplemented
+elif args.net.lower() == 'densenet':
+    if args.model.upper() == "O_Master".upper():
+        net = densenet.DenseNet3(depth=40, n_classes=n_classes, useRRSVM=True)
+    elif args.model.upper() == 'Orig'.upper():
+        net = densenet.DenseNet3(depth=40, n_classes=n_classes, useRRSVM=False)
     else:
         raise NotImplemented
 else:

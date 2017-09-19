@@ -135,7 +135,7 @@ class RRSVM_Module(torch.nn.Module):
     # comapred to convolution:
     # __init__(self, in_channels, out_channels, kernel_size, stride=1,
              # padding=0, dilation=1, groups=1, bias=True):
-    def __init__(self, in_channels, kernel_size, stride=None, padding=0, dilation=1, p_constraint=False,return_indices=False):
+    def __init__(self, in_channels, kernel_size, stride=None, padding=0, dilation=1, p_constraint=False, return_indices=False):
         super(RRSVM_Module, self).__init__()
         self.kernel_size = kernel_size
         if stride is not None:

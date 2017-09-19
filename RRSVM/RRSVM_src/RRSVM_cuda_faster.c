@@ -24,11 +24,11 @@ void RRSVM_updateOutput_cuda(THCudaTensor *input, THCudaTensor *s, THCudaTensor 
 
     THCudaTensor_resize4d(state, output, batchSize, nInputPlane, outputHeight, outputWidth);
     //TODO: this will cause memory leak
-    output = THCudaTensor_newContiguous(state, output);
+//    output = THCudaTensor_newContiguous(state, output);
     THCudaTensor_zero(state,output);
 
     THCudaLongTensor_resize5d(state, indices, batchSize, nInputPlane, outputHeight, outputWidth, kH * kW);
-    indices = THCudaLongTensor_newContiguous(state, indices);
+//    indices = THCudaLongTensor_newContiguous(state, indices);
     THCudaLongTensor_zero(state, indices);
 
     real *output_data, *s_data;
@@ -40,7 +40,7 @@ void RRSVM_updateOutput_cuda(THCudaTensor *input, THCudaTensor *s, THCudaTensor 
 
     int elt;
 
-#pragma omp parallel for private(elt)
+//#pragma omp parallel for private(elt)
 
     for (elt = 0; elt < batchSize; elt ++) {
         THCudaTensor *input_d_h_w = THCudaTensor_new(state);
@@ -70,8 +70,8 @@ void RRSVM_updateOutput_cuda(THCudaTensor *input, THCudaTensor *s, THCudaTensor 
 
     THCudaTensor_free(state, input);
     THCudaTensor_free(state, s);
-    THCudaTensor_free(state, output);
-    THCudaLongTensor_free(state, indices);
+//    THCudaTensor_free(state, output);
+//    THCudaLongTensor_free(state, indices);
 }
 
 
@@ -94,7 +94,7 @@ void RRSVM_updateGradInput_cuda(THCudaTensor *s, THCudaLongTensor *indices, THCu
 
 
     THCudaTensor_resize4d(state, gradInput, batchSize, nInputPlane, inputHeight, inputWidth);
-    gradInput = THCudaTensor_newContiguous(state, gradInput);
+//    gradInput = THCudaTensor_newContiguous(state, gradInput);
     THCudaTensor_zero(state, gradInput);
 
     real *gradOutput_data, *s_data;
@@ -105,7 +105,7 @@ void RRSVM_updateGradInput_cuda(THCudaTensor *s, THCudaLongTensor *indices, THCu
     indices_data = THCudaLongTensor_data(state, indices);
     int elt;
 
-#pragma omp parallel for private(elt)
+//#pragma omp parallel for private(elt)
 
     for ( elt = 0; elt < batchSize; elt ++) {
         // Matrix mulitply per output:
@@ -127,7 +127,7 @@ void RRSVM_updateGradInput_cuda(THCudaTensor *s, THCudaLongTensor *indices, THCu
     THCudaTensor_free(state, s);
     THCudaLongTensor_free(state, indices);
     THCudaTensor_free(state, gradOutput);
-    THCudaTensor_free(state, gradInput);
+//    THCudaTensor_free(state, gradInput);
 }
 
 void RRSVM_accGradParameters_cuda(THCudaTensor *input, THCudaLongTensor * indices, THCudaTensor *gradOutput, THCudaTensor *gradS,
@@ -148,7 +148,7 @@ void RRSVM_accGradParameters_cuda(THCudaTensor *input, THCudaLongTensor * indice
 
 
     THCudaTensor_resize2d(state, gradS, nInputPlane, kH * kW);
-    gradS = THCudaTensor_newContiguous(state, gradS);
+//    gradS = THCudaTensor_newContiguous(state, gradS);
     THCudaTensor_zero(state, gradS);
 
 
@@ -182,6 +182,6 @@ void RRSVM_accGradParameters_cuda(THCudaTensor *input, THCudaLongTensor * indice
     THCudaTensor_free(state, input);
     THCudaTensor_free(state, gradOutput);
     THCudaLongTensor_free(state, indices);
-    THCudaTensor_free(state, gradS);
+//    THCudaTensor_free(state, gradS);
 
 }
