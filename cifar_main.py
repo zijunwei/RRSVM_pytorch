@@ -27,11 +27,14 @@ parser.add_argument('--resume', '-r', action='store_true', help='resume from che
 parser.add_argument('--model', default='VGG16_F_O', help='Type of model')
 parser.add_argument("--gpu_id", default=None, type=int)
 parser.add_argument('--positive_constraint', '-p', action='store_true', help='positivity constraint')
+parser.add_argument('--multiGpu', '-m', action='store_true', help='positivity constraint')
+parser.add_argument('--mbatch_size', default=64, type=int, help='The batch size would be 64, but this can be fractions of 64 to fit into memory ')
 parser.add_argument('--n_epochs', default=300, type=int)
-parser.add_argument('--net', default='vgg', type=str)
+parser.add_argument('--net', default='vgg', type=str, help='If DenseNet, please do DenseNet_L_k')
 
 args = parser.parse_args()
-use_cuda = torch.cuda.is_available() and args.gpu_id is not None
+
+use_cuda = torch.cuda.is_available() and (args.gpu_id is not None or args.multiGpu)
 
 
 best_acc = 0  # best test accuracy
@@ -42,31 +45,42 @@ print('==> Preparing data..')
 transform_train = transforms.transform_train
 transform_test = transforms.transform_test
 
-train_batch_size = 128
+full_batch_size = 64  # Too large to fit a 64 into it
+
+useMiniBatch = False
+if args.mbatch_size != full_batch_size:
+    useMiniBatch = True
+
+
+train_batch_size = args.mbatch_size
+update_rate = int(full_batch_size/train_batch_size) + 1
+
 test_batch_size = 100
 
+
+kwargs = {'num_workers': 4, 'pin_memory': True}
 if args.dataset.lower() == 'cifar10':
     print("CIFAR10")
     trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=train_batch_size, shuffle=True, num_workers=2)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=train_batch_size, shuffle=True, **kwargs)
     n_traindata = len(trainset)
     print('# training: {:d}\t batch size: {:d}, # batch: {:d}'.format(n_traindata, train_batch_size, n_traindata//train_batch_size))
 
     testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_test)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=test_batch_size, shuffle=False, num_workers=2)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=test_batch_size, shuffle=False, **kwargs)
     n_testdata = len(testset)
     print('# testing: {:d}\t batch size: {:d}, # batch: {:d}'.format(n_testdata, test_batch_size, n_testdata//test_batch_size))
     n_classes = 10
 elif args.dataset.lower() == 'cifar100':
     print("CIFAR100")
     trainset = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform_train)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=train_batch_size, shuffle=True, num_workers=2)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=train_batch_size, shuffle=True, **kwargs)
     n_traindata = len(trainset)
     print('# training: {:d}\t batch size: {:d}, # batch: {:d}'.format(n_traindata, train_batch_size,
                                                                       n_traindata // train_batch_size))
 
     testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=test_batch_size, shuffle=False, num_workers=2)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=test_batch_size, shuffle=False, **kwargs)
     n_testdata = len(testset)
     print('# testing: {:d}\t batch size: {:d}, # batch: {:d}'.format(n_testdata, test_batch_size, n_testdata // test_batch_size))
     n_classes = 100
@@ -75,19 +89,8 @@ else:
     raise NameError
 
 
-
-# Model
 print ("Net: {:s}\tModel:{:s}".format(args.net, args.model))
 
-save_dir = './snapshots/{:s}_{:s}_{:s}'.format(args.dataset.lower(), args.net.lower(), args.model.upper())
-if args.positive_constraint:
-    save_dir = './snapshots/{:s}_{:s}_{:s}_p'.format(args.dataset.lower(), args.net.lower(), args.model.upper())
-save_dir = dir_utils.get_dir(save_dir)
-
-p_constraint = False
-if args.positive_constraint:
-    p_constraint = True
-    positive_clipper = RRSVM.RRSVM_PositiveClipper()
 
 if args.net.lower() == 'vgg':
     net = vgg.VGG(args.model.upper(), n_classes=n_classes)
@@ -98,28 +101,52 @@ elif args.net.lower() == 'inception':
         net = inception.GoogLeNet(n_classes=n_classes, useRRSVM=False)
     else:
         raise NotImplemented
-elif args.net.lower() == 'densenet':
+elif 'densenet' in args.net.lower():
+    hyper_params = args.net.lower().split('_')
+    depth = int(hyper_params[1])
+    growth_rate = int(hyper_params[2])
     if args.model.upper() == "O_Master".upper():
-        net = densenet.DenseNet3(depth=40, n_classes=n_classes, useRRSVM=True)
+        net = densenet.DenseNet3(depth=depth, growth_rate=growth_rate, n_classes=n_classes, useRRSVM=True)
     elif args.model.upper() == 'Orig'.upper():
-        net = densenet.DenseNet3(depth=40, n_classes=n_classes, useRRSVM=False)
+        net = densenet.DenseNet3(depth=depth, growth_rate=growth_rate, n_classes=n_classes, useRRSVM=False)
     else:
         raise NotImplemented
 else:
     raise  NotImplemented
 
+print('Number of model parameters: {}'.format(
+        sum([p.data.nelement() for p in net.parameters()])))
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(filter(lambda p:p.requires_grad,  net.parameters()), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+optimizer = optim.SGD(filter(lambda p:p.requires_grad,  net.parameters()), lr=args.lr, momentum=0.9, weight_decay=1e-4) # was 5e-4 before
+
+
+p_constraint = False
+if args.positive_constraint:
+    p_constraint = True
+    positive_clipper = RRSVM.RRSVM_PositiveClipper()
+
 
 if use_cuda:
-    torch.cuda.set_device(args.gpu_id)
-    net.cuda()
+    if args.multiGpu:
+        device_count = torch.cuda.device_count()
+        print("Using {:d} GPUs".format(device_count))
+        net.cuda()
+        net = nn.DataParallel(net, device_ids=[i for i in range(device_count)])
+    else:
+        torch.cuda.set_device(args.gpu_id)
+        net.cuda()
+
     criterion.cuda()
 
-    # cudnn.enabled = False
+
+# Model
 
 
+save_dir = './snapshots/{:s}_{:s}_{:s}'.format(args.dataset.lower(), args.net.lower(), args.model.upper())
+if args.positive_constraint:
+    save_dir = './snapshots/{:s}_{:s}_{:s}_p'.format(args.dataset.lower(), args.net.lower(), args.model.upper())
+save_dir = dir_utils.get_dir(save_dir)
 
 if args.resume:
     # Load checkpoint.
@@ -143,20 +170,33 @@ def train(epoch):
     correct = 0
     total = 0
     total_n = 0
-    lr = args.lr * (0.1 ** (epoch // 50))
+    # before it was 50 for each
+    lr = args.lr * (0.1 ** (epoch // 150)) * (0.1 ** (epoch // 225))
     t_sets.set_lr(optimizer, lr)
     pbar = progressbar.ProgressBar(max_value=n_traindata//train_batch_size)
+
+    # acc_batch_loss = 0
+
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
-        optimizer.zero_grad()
+
+
+        if batch_idx % update_rate ==0:
+            optimizer.zero_grad()
+            # acc_batch_loss = 0
+
         inputs, targets = Variable(inputs), Variable(targets)
         outputs = net(inputs)
         loss = criterion(outputs, targets)
         loss.backward()
-        optimizer.step()
+        # acc_batch_loss += loss.cpu().numpy()[0]
 
+        if batch_idx % update_rate ==0:
+            optimizer.step()
         train_loss += loss.data[0]
+
+
         # print("Trainloss: {:.02f}".format(loss.data[0]))
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
