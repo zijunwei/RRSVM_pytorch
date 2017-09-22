@@ -1,4 +1,3 @@
-#TODO: Not tested yet
 import argparse
 import os
 import shutil
@@ -11,52 +10,47 @@ import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 import torch.optim
 import torch.utils.data
-import torch.utils.data.distributed
+# import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-import torchvision.models as models
+import py_utils.dir_utils as dir_utils
+# import torchvision.models as models
 
-model_names = sorted(name for name in models.__dict__
-    if name.islower() and not name.startswith("__")
-    and callable(models.__dict__[name]))
+# model_names = sorted(name for name in models.__dict__
+#     if name.islower() and not name.startswith("__")
+#     and callable(models.__dict__[name]))
+from models.imagenet import inception_v3
+import RRSVM.RRSVM as RRSVM
 
-parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
-parser.add_argument('data', metavar='DIR',
-                    help='path to dataset')
-parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet18',
-                    choices=model_names,
-                    help='model architecture: ' +
-                        ' | '.join(model_names) +
-                        ' (default: resnet18)')
-parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
-                    help='number of data loading workers (default: 4)')
-parser.add_argument('--epochs', default=90, type=int, metavar='N',
-                    help='number of total epochs to run')
-parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
-                    help='manual epoch number (useful on restarts)')
-parser.add_argument('-b', '--batch-size', default=256, type=int,
-                    metavar='N', help='mini-batch size (default: 256)')
+
+parser = argparse.ArgumentParser(description='PyTorch ImageNet Inception V3 Training')
+
+
+parser.add_argument('--finetune', '-f', action='store_true', help='use pre-trained model to finetune')
+parser.add_argument('--model', default='Orig', help='Type of model [Orig, RRSVM]')
+parser.add_argument("--gpu_id", default=None, type=int)
+parser.add_argument('--positive_constraint', '-p', action='store_true', help='positivity constraint')
+parser.add_argument('--multiGpu', '-m', action='store_true', help='positivity constraint')
+parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
+parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
+                    help='evaluate model on validation set')
+
+
 parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
                     metavar='LR', help='initial learning rate')
+parser.add_argument('-b', '--batch-size', default=32, type=int,
+                    metavar='N', help='mini-batch size (default: 256 for others, 32 for Inception-V3)')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)')
-parser.add_argument('--print-freq', '-p', default=10, type=int,
+parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
+                    help='manual epoch number (useful on restarts)')
+parser.add_argument('--n_epochs', default=300, type=int, help='number of total epochs to run')
+parser.add_argument('--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
-                    help='path to latest checkpoint (default: none)')
-parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
-                    help='evaluate model on validation set')
-parser.add_argument('--pretrained', dest='pretrained', action='store_true',
-                    help='use pre-trained model')
-parser.add_argument('--world-size', default=1, type=int,
-                    help='number of distributed processes')
-parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
-                    help='url used to set up distributed training')
-parser.add_argument('--dist-backend', default='gloo', type=str,
-                    help='distributed backend')
-
+parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+                    help='number of data loading workers (default: 4)')
 best_prec1 = 0
 
 
@@ -64,81 +58,105 @@ def main():
     global args, best_prec1
     args = parser.parse_args()
 
-    args.distributed = args.world_size > 1
-
-    if args.distributed:
-        dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
-                                world_size=args.world_size)
-
-    # create model
-    if args.pretrained:
-        print("=> using pre-trained model '{}'".format(args.arch))
-        model = models.__dict__[args.arch](pretrained=True)
+    if args.finetune:
+        print("=> using pre-trained model")
+        pretrained = True
     else:
-        print("=> creating model '{}'".format(args.arch))
-        model = models.__dict__[args.arch]()
+        print("=> creating model from new")
+        pretrained = False
 
-    if not args.distributed:
-        if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
-            model.features = torch.nn.DataParallel(model.features)
-            model.cuda()
-        else:
-            model = torch.nn.DataParallel(model).cuda()
+    if args.model.lower() == 'orig':
+        print("Using Original Model")
+        useRRSVM = False
+    elif args.model.lower() == 'rrsvm':
+        print("Using RRSVM Model")
+        useRRSVM = True
     else:
-        model.cuda()
-        model = torch.nn.parallel.DistributedDataParallel(model)
+        raise NotImplemented
 
-    # define loss function (criterion) and optimizer
-    criterion = nn.CrossEntropyLoss().cuda()
+    model = inception_v3.inception_v3(pretrained, useRRSVM=useRRSVM)
 
-    optimizer = torch.optim.SGD(model.parameters(), args.lr,
+    print("Number of Params in InceptionV3-{:s}\t{:d}".format(args.model, sum([p.data.nelement() for p in model.parameters()])))
+
+
+    criterion = nn.CrossEntropyLoss()
+
+    optimizer = torch.optim.SGD(filter(lambda p:p.requires_grad,  model.parameters()), args.lr,
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
 
+    p_constraint = False
+    if args.positive_constraint:
+        p_constraint = True
+
+    use_cuda = torch.cuda.is_available() and (args.gpu_id is not None or args.multiGpu)
+
+    if use_cuda:
+        if args.multiGpu:
+            device_count = torch.cuda.device_count()
+            print("Using {:d} GPUs".format(device_count))
+            model.cuda()
+            model = nn.DataParallel(model, device_ids=[i for i in range(device_count)])
+        else:
+            torch.cuda.set_device(args.gpu_id)
+            model.cuda()
+
+        criterion.cuda()
+        cudnn.benchmark = True
+
+    save_dir = './snapshots/ImageNet_Inceptionv3_{:s}'.format(args.model.upper())
+    if args.positive_constraint:
+        save_dir = save_dir + '_p'
+    if args.finetune:
+        save_dir = save_dir + '_finetune'
+
+    save_dir = dir_utils.get_dir(save_dir)
+
     # optionally resume from a checkpoint
     if args.resume:
-        if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
-            args.start_epoch = checkpoint['epoch']
-            best_prec1 = checkpoint['best_prec1']
-            model.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})"
-                  .format(args.resume, checkpoint['epoch']))
-        else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
 
-    cudnn.benchmark = True
+        # if os.path.isfile(args.resume):
+        ckpt_filename = 'model_best.ckpt.t7'
+        assert os.path.isfile(os.path.join(save_dir, ckpt_filename)), 'Error: no checkpoint directory found!'
 
-    # Data loading code
-    traindir = os.path.join(args.data, 'train')
-    valdir = os.path.join(args.data, 'val')
+        checkpoint = torch.load(os.path.join(save_dir, ckpt_filename), map_location=lambda storage, loc: storage)
+        args.start_epoch = checkpoint['epoch']
+        best_prec1 = checkpoint['best_prec1']
+        best_prec5 = checkpoint['best_prec5']
+        model.load_state_dict(checkpoint['state_dict'])
+        # TODO: check how to load optimizer correctly
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        print("=> loading checkpoint '{}', epoch: {:d}".format(ckpt_filename, args.start_epoch))
+
+    else:
+        print('==> Training with NO History..')
+        if os.path.isfile(os.path.join(save_dir, 'log.txt')):
+            os.remove(os.path.join(save_dir, 'log.txt'))
+
+    user_root = os.path.expanduser('~')
+    dataset_path = os.path.join(user_root, 'datasets/imagenet12')
+    traindir = os.path.join(dataset_path, 'train')
+    valdir = os.path.join(dataset_path, 'val')
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
     train_dataset = datasets.ImageFolder(
         traindir,
         transforms.Compose([
-            transforms.RandomSizedCrop(224),
+            transforms.RandomSizedCrop(299),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
         ]))
 
-    if args.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-    else:
-        train_sampler = None
-
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
-        num_workers=args.workers, pin_memory=True, sampler=train_sampler)
+        train_dataset, batch_size=args.batch_size, shuffle=True,
+        num_workers=args.workers, pin_memory=True)
 
     val_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(valdir, transforms.Compose([
-            transforms.Scale(256),
-            transforms.CenterCrop(224),
+            transforms.Scale(341),
+            transforms.CenterCrop(299),
             transforms.ToTensor(),
             normalize,
         ])),
@@ -146,19 +164,19 @@ def main():
         num_workers=args.workers, pin_memory=True)
 
     if args.evaluate:
-        validate(val_loader, model, criterion)
+        validate(val_loader, model, criterion, use_cuda)
         return
 
-    for epoch in range(args.start_epoch, args.epochs):
-        if args.distributed:
-            train_sampler.set_epoch(epoch)
+    for epoch in range(args.start_epoch, args.n_epochs):
+        # if args.distributed:
+        #     train_sampler.set_epoch(epoch)
         adjust_learning_rate(optimizer, epoch)
 
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch)
+        train(train_loader, model, criterion, optimizer, epoch, p_constraint, use_cuda)
 
         # evaluate on validation set
-        prec1 = validate(val_loader, model, criterion)
+        prec1, prec5 = validate(val_loader, model, criterion, use_cuda)
 
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
@@ -168,16 +186,20 @@ def main():
             'arch': args.arch,
             'state_dict': model.state_dict(),
             'best_prec1': best_prec1,
+            'best_prec5': prec5,
             'optimizer' : optimizer.state_dict(),
         }, is_best)
 
 
-def train(train_loader, model, criterion, optimizer, epoch):
+def train(train_loader, model, criterion, optimizer, epoch, p_constraint, use_cuda):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
+
+    if p_constraint:
+        positive_clipper = RRSVM.RRSVM_PositiveClipper()
 
     # switch to train mode
     model.train()
@@ -186,27 +208,34 @@ def train(train_loader, model, criterion, optimizer, epoch):
     for i, (input, target) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
-
-        target = target.cuda(async=True)
+        if use_cuda:
+            target = target.cuda()
+            input = input.cuda()
         input_var = torch.autograd.Variable(input)
         target_var = torch.autograd.Variable(target)
 
         # compute output
-        output = model(input_var)
+        output, output_aux = model(input_var)
         loss = criterion(output, target_var)
+        loss_aux = criterion(output, target_var)
+        # TODO: here check how to merge aux loss
+        t_loss = loss + loss_aux
 
         # measure accuracy and record loss
         prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-        losses.update(loss.data[0], input.size(0))
+        losses.update(loss.data[0]+loss_aux.data[0], input.size(0))
         top1.update(prec1[0], input.size(0))
         top5.update(prec5[0], input.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
-        loss.backward()
+        t_loss.backward()
         optimizer.step()
 
+        if p_constraint and positive_clipper.frequency % (i+1) == 0:
+            model.apply(positive_clipper)
         # measure elapsed time
+
         batch_time.update(time.time() - end)
         end = time.time()
 
@@ -221,7 +250,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
                    data_time=data_time, loss=losses, top1=top1, top5=top5))
 
 
-def validate(val_loader, model, criterion):
+def validate(val_loader, model, criterion, useCuda):
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -232,7 +261,9 @@ def validate(val_loader, model, criterion):
 
     end = time.time()
     for i, (input, target) in enumerate(val_loader):
-        target = target.cuda(async=True)
+        if useCuda:
+            target = target.cuda()
+            input = input.cuda()
         input_var = torch.autograd.Variable(input, volatile=True)
         target_var = torch.autograd.Variable(target, volatile=True)
 
@@ -262,7 +293,7 @@ def validate(val_loader, model, criterion):
     print(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
           .format(top1=top1, top5=top5))
 
-    return top1.avg
+    return top1.avg, top5.avg
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
