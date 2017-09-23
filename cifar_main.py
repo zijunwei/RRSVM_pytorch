@@ -131,8 +131,7 @@ if use_cuda:
     if args.multiGpu:
         device_count = torch.cuda.device_count()
         print("Using {:d} GPUs".format(device_count))
-        net.cuda()
-        net = nn.DataParallel(net, device_ids=[i for i in range(device_count)])
+        net = nn.DataParallel(net, device_ids=[i for i in range(device_count)]).cuda()
     else:
         torch.cuda.set_device(args.gpu_id)
         net.cuda()

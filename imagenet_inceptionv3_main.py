@@ -78,7 +78,6 @@ def main():
 
     print("Number of Params in InceptionV3-{:s}\t{:d}".format(args.model, sum([p.data.nelement() for p in model.parameters()])))
 
-
     criterion = nn.CrossEntropyLoss()
 
     optimizer = torch.optim.SGD(filter(lambda p:p.requires_grad,  model.parameters()), args.lr,
@@ -95,8 +94,7 @@ def main():
         if args.multiGpu:
             device_count = torch.cuda.device_count()
             print("Using {:d} GPUs".format(device_count))
-            model.cuda()
-            model = nn.DataParallel(model, device_ids=[i for i in range(device_count)])
+            model = nn.DataParallel(model, device_ids=[i for i in range(device_count)]).cuda()
         else:
             torch.cuda.set_device(args.gpu_id)
             model.cuda()
