@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser(description='PyTorch ImageNet Inception V3 Trai
 
 parser.add_argument('--finetune', '-f', action='store_true', help='use pre-trained model to finetune')
 parser.add_argument('--model', default='Orig', help='Type of model [Orig, RRSVM]')
-parser.add_argument("--gpu_id", default=None, type=int)
+parser.add_argument("--gpu_id", default=None, type=str)
 parser.add_argument('--positive_constraint', '-p', action='store_true', help='positivity constraint')
 parser.add_argument('--multiGpu', '-m', action='store_true', help='positivity constraint')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
@@ -51,8 +51,8 @@ parser.add_argument('--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-best_prec1 = 0
 
+best_prec1 = 0
 
 def main():
     global args, best_prec1
@@ -92,16 +92,24 @@ def main():
 
     if use_cuda:
         if args.multiGpu:
-            device_count = torch.cuda.device_count()
-            print("Using {:d} GPUs".format(device_count))
-            model = nn.DataParallel(model, device_ids=[i for i in range(device_count)]).cuda()
+            if args.gpu_id is None: # using all the GPUs
+                device_count = torch.cuda.device_count()
+                print("Using ALL {:d} GPUs".format(device_count))
+                model = nn.DataParallel(model, device_ids=[i for i in range(device_count)]).cuda()
+            else:
+                print("Using GPUs: {:s}".format(args.gpu_id))
+                device_ids = [int(x) for x in args.gpu_id]
+                model = nn.DataParallel(model, device_ids=device_ids).cuda()
+
+
         else:
-            torch.cuda.set_device(args.gpu_id)
+            torch.cuda.set_device(int(args.gpu_id))
             model.cuda()
 
         criterion.cuda()
         cudnn.benchmark = True
 
+    global save_dir
     save_dir = './snapshots/ImageNet_Inceptionv3_{:s}'.format(args.model.upper())
     if args.positive_constraint:
         save_dir = save_dir + '_p'
@@ -119,8 +127,7 @@ def main():
 
         checkpoint = torch.load(os.path.join(save_dir, ckpt_filename), map_location=lambda storage, loc: storage)
         args.start_epoch = checkpoint['epoch']
-        best_prec1 = checkpoint['best_prec1']
-        best_prec5 = checkpoint['best_prec5']
+        best_prec1 = checkpoint['prec1']
         model.load_state_dict(checkpoint['state_dict'])
         # TODO: check how to load optimizer correctly
         optimizer.load_state_dict(checkpoint['optimizer'])
@@ -168,7 +175,7 @@ def main():
     for epoch in range(args.start_epoch, args.n_epochs):
         # if args.distributed:
         #     train_sampler.set_epoch(epoch)
-        adjust_learning_rate(optimizer, epoch)
+        adjust_learning_rate(optimizer, epoch, args.finetune)
 
         # train for one epoch
         train(train_loader, model, criterion, optimizer, epoch, p_constraint, use_cuda)
@@ -181,12 +188,11 @@ def main():
         best_prec1 = max(prec1, best_prec1)
         save_checkpoint({
             'epoch': epoch + 1,
-            'arch': args.arch,
             'state_dict': model.state_dict(),
-            'best_prec1': best_prec1,
-            'best_prec5': prec5,
-            'optimizer' : optimizer.state_dict(),
-        }, is_best)
+            'prec1': prec1,
+            'prec5': prec5,
+            'optimizer': optimizer.state_dict(),
+        }, is_best, filename=os.path.join(save_dir, '{:04d}_checkpoint.pth.tar'.format(epoch)))
 
 
 def train(train_loader, model, criterion, optimizer, epoch, p_constraint, use_cuda):
@@ -246,6 +252,15 @@ def train(train_loader, model, criterion, optimizer, epoch, p_constraint, use_cu
                   'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                    epoch, i, len(train_loader), batch_time=batch_time,
                    data_time=data_time, loss=losses, top1=top1, top5=top5))
+        # #DBUGE
+        # if i % 100 == 0:
+        #     save_checkpoint({
+        #         'epoch': epoch + 1,
+        #         'state_dict': model.state_dict(),
+        #         'prec1': prec1,
+        #         'prec5': prec5,
+        #         'optimizer': optimizer.state_dict(),
+        #     }, False, filename=os.path.join(save_dir, '{:04d}_checkpoint.pth.tar'.format(epoch)))
 
 
 def validate(val_loader, model, criterion, useCuda):
@@ -318,9 +333,14 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def adjust_learning_rate(optimizer, epoch):
+def adjust_learning_rate(optimizer, epoch, isFinetune=False):
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 30))
+    if isFinetune:
+        every_n = 5
+    else:
+        every_n = 30
+
+    lr = args.lr * (0.1 ** (epoch // every_n))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
