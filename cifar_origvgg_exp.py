@@ -14,9 +14,7 @@ import argparse
 # from models import *
 import progressbar
 from torch.autograd import Variable
-from models.cifar import vgg
-from models.cifar import inception
-from models.cifar import densenet
+from models.cifar import orig_vgg
 from py_utils import dir_utils
 from pt_utils import t_sets
 import RRSVM.RRSVM as RRSVM
@@ -24,17 +22,15 @@ parser = argparse.ArgumentParser(description='PyTorch CIFAR Training on VGG')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--dataset', default='cifar10', type=str, help='dataset = [cifar/cifar100]')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
-parser.add_argument('--model', default='VGG16_F_O', help='Type of model')
-parser.add_argument("--gpu_id", default=None, type=str)
+parser.add_argument("--gpu_id", default=None, type=int)
 parser.add_argument('--positive_constraint', '-p', action='store_true', help='positivity constraint')
 parser.add_argument('--multiGpu', '-m', action='store_true', help='positivity constraint')
 parser.add_argument('--mbatch_size', default=64, type=int, help='The batch size would be 64, but this can be fractions of 64 to fit into memory ')
 parser.add_argument('--n_epochs', default=300, type=int)
-parser.add_argument('--net', default='vgg', type=str, help='If DenseNet, please do DenseNet_L_k')
 parser.add_argument('--id', default=None, type=str, help='The Id of the run')
+parser.add_argument('--verbose', '-v', dest='verbose', action='store_true', help='verbose mode, if not, saved in log.txt')
 args = parser.parse_args()
-
-use_cuda = torch.cuda.is_available() and (args.gpu_id is not None or args.multiGpu)
+identifier = 'OrigVgg'
 
 
 best_acc = 0  # best test accuracy
@@ -53,7 +49,7 @@ if args.mbatch_size != full_batch_size:
 
 
 train_batch_size = args.mbatch_size
-update_rate = int(full_batch_size/train_batch_size) + 1
+# update_rate = int(full_batch_size/train_batch_size)
 
 test_batch_size = 100
 
@@ -89,30 +85,11 @@ else:
     raise NameError
 
 
-print ("Net: {:s}\tModel:{:s}".format(args.net, args.model))
+print ("Model:{:s}".format(identifier))
 
 
-if args.net.lower() == 'vgg':
-    model = vgg.VGG(args.model.upper(), n_classes=n_classes)
-elif args.net.lower() == 'inception':
-    if args.model.upper() == "O_Master".upper():
-        model = inception.GoogLeNet(n_classes=n_classes, useRRSVM=True)
-    elif args.model.upper() == 'Orig'.upper():
-        model = inception.GoogLeNet(n_classes=n_classes, useRRSVM=False)
-    else:
-        raise NotImplemented
-elif 'densenet' in args.net.lower():
-    hyper_params = args.net.lower().split('_')
-    depth = int(hyper_params[1])
-    growth_rate = int(hyper_params[2])
-    if args.model.upper() == "O_Master".upper():
-        model = densenet.DenseNet3(depth=depth, growth_rate=growth_rate, n_classes=n_classes, useRRSVM=True)
-    elif args.model.upper() == 'Orig'.upper():
-        model = densenet.DenseNet3(depth=depth, growth_rate=growth_rate, n_classes=n_classes, useRRSVM=False)
-    else:
-        raise NotImplemented
-else:
-    raise  NotImplemented
+model = orig_vgg.VGG('VGG16_F_M', n_classes=n_classes)
+
 
 print('Number of model parameters: {}'.format(
         sum([p.data.nelement() for p in model.parameters()])))
@@ -125,6 +102,8 @@ p_constraint = False
 if args.positive_constraint:
     p_constraint = True
     positive_clipper = RRSVM.RRSVM_PositiveClipper()
+
+use_cuda = torch.cuda.is_available() and (args.gpu_id is not None or args.multiGpu)
 
 if use_cuda:
     if args.multiGpu:
@@ -149,13 +128,16 @@ if use_cuda:
 # Model
 
 
-save_dir = './snapshots/{:s}_{:s}_{:s}'.format(args.dataset.lower(), args.net.lower(), args.model.upper())
+save_dir = './snapshots/{:s}_{:s}'.format(args.dataset.lower(), identifier)
 if args.positive_constraint:
-    save_dir = './snapshots/{:s}_{:s}_{:s}_p'.format(args.dataset.lower(), args.net.lower(), args.model.upper())
+    save_dir = './snapshots/{:s}_{:s}_p'.format(args.dataset.lower(), identifier)
 if args.id is not None:
     save_dir = save_dir+args.id
 
 save_dir = dir_utils.get_dir(save_dir)
+if not args.verbose:
+        log_file = os.path.join(save_dir, 'log.txt')
+        sys.stdout = open(log_file, "w")
 
 if args.resume:
     # Load checkpoint.
@@ -168,8 +150,8 @@ if args.resume:
     start_epoch = checkpoint['epoch']
 else:
     print('==> Training from scratch..')
-    if os.path.isfile(os.path.join(save_dir, 'log.txt')):
-        os.remove(os.path.join(save_dir, 'log.txt'))
+    if os.path.isfile(os.path.join(save_dir, 'ckpt_result.txt')):
+        os.remove(os.path.join(save_dir, 'ckpt_result.txt'))
 
 
 def train(epoch):
@@ -182,7 +164,8 @@ def train(epoch):
     # before it was 50 for each
     lr = args.lr * (0.1 ** (epoch // 150)) * (0.1 ** (epoch // 225))
     t_sets.set_lr(optimizer, lr)
-    pbar = progressbar.ProgressBar(max_value=n_traindata//train_batch_size)
+    if args.verbose:
+        pbar = progressbar.ProgressBar(max_value=n_traindata//train_batch_size)
 
     # acc_batch_loss = 0
 
@@ -191,8 +174,8 @@ def train(epoch):
             inputs, targets = inputs.cuda(), targets.cuda()
 
 
-        if batch_idx % update_rate ==0:
-            optimizer.zero_grad()
+        # if batch_idx % update_rate ==0:
+        optimizer.zero_grad()
             # acc_batch_loss = 0
 
         inputs, targets = Variable(inputs), Variable(targets)
@@ -201,8 +184,8 @@ def train(epoch):
         loss.backward()
         # acc_batch_loss += loss.cpu().numpy()[0]
 
-        if batch_idx % update_rate ==0:
-            optimizer.step()
+        # if batch_idx % update_rate ==0:
+        optimizer.step()
         train_loss += loss.data[0]
 
 
@@ -210,7 +193,8 @@ def train(epoch):
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
-        pbar.update(batch_idx)
+        if args.verbose:
+            pbar.update(batch_idx)
         total_n = batch_idx + 1
         if p_constraint and positive_clipper.frequency % total_n == 0:
             model.apply(positive_clipper)
@@ -219,7 +203,7 @@ def train(epoch):
     t_acc = 100. * correct / total
     t_loss = train_loss / (total_n)
 
-    w_line = '\nTrain:\tLoss: {:d}\tAcc: {:.04f}\t{:.04f}\tLR {:0.6f}'.format(epoch, t_loss, t_acc, lr)
+    w_line = '\nTrain:\t {:d}\tLoss: \tAcc: {:.04f}\t{:.04f}\tLR {:0.6f}'.format(epoch, t_loss, t_acc, lr)
     print (w_line)
 
 def test(epoch):
@@ -229,7 +213,8 @@ def test(epoch):
     correct = 0
     total = 0
     total_n = 0
-    pbar = progressbar.ProgressBar(max_value=n_testdata//test_batch_size)
+    if args.verbose:
+        pbar = progressbar.ProgressBar(max_value=n_testdata//test_batch_size)
     for batch_idx, (inputs, targets) in enumerate(testloader):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
@@ -241,21 +226,22 @@ def test(epoch):
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
-        pbar.update(batch_idx)
+        if args.verbose:
+            pbar.update(batch_idx)
         total_n = batch_idx + 1
     # Save checkpoint.
     t_acc = 100.*correct/total
     t_loss = test_loss/(total_n)
 
-    w_line = '\nVal:\{:d}\tLoss: {:.04f}\tAcc: {:.04f}'.format(epoch, t_loss, t_acc)
+    w_line = '\nVal:\t{:d}\tLoss: {:.04f}\tAcc: {:.04f}'.format(epoch, t_loss, t_acc)
     print (w_line)
     # save_dir = dir_utils.get_dir('./snapshots/cifar10_vgg_{:s}'.format(args.model))
-    log_file = os.path.join(save_dir, 'log.txt')
-    if not os.path.isfile(log_file):
-        with open(log_file, 'w') as f:
+    result_file = os.path.join(save_dir, 'ckpt_result.txt')
+    if not os.path.isfile(result_file):
+        with open(result_file, 'w') as f:
             f.write(w_line)
     else:
-        with open(log_file, 'a') as f:
+        with open(result_file, 'a') as f:
             f.write(w_line)
     sys.stdout.flush()
 
