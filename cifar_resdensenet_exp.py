@@ -14,11 +14,13 @@ import argparse
 # from models import *
 import progressbar
 from torch.autograd import Variable
-from models.cifar import res_vgg
+from models.cifar import res_densenet
 from py_utils import dir_utils
 from pt_utils import t_sets
 import RRSVM.RRSVM as RRSVM
-parser = argparse.ArgumentParser(description='PyTorch CIFAR Training on VGG')
+parser = argparse.ArgumentParser(description='PyTorch CIFAR Training on ResDenseNet')
+parser.add_argument('--depth', default=100, type=int, help='depth of DenseNet')
+parser.add_argument('--gr', default=12, type=int, help='growth rate of DenseNet')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--dataset', default='cifar10', type=str, help='dataset = [cifar/cifar100]')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
@@ -30,7 +32,7 @@ parser.add_argument('--n_epochs', default=350, type=int)
 parser.add_argument('--id', default=None, type=str, help='The Id of the run')
 parser.add_argument('--verbose', '-v', dest='verbose', action='store_true', help='verbose mode, if not, saved in log.txt')
 args = parser.parse_args()
-identifier = 'ResVgg'
+identifier = 'ResDenseNet{:d}_{:d}'.format(args.depth, args.gr)
 
 
 best_acc = 0  # best test accuracy
@@ -88,7 +90,7 @@ else:
 print ("Model:{:s}".format(identifier))
 
 
-model = res_vgg.VGG('VGG16_F_O', n_classes=n_classes)
+model = res_densenet.DenseNet3(depth=args.depth, growth_rate=args.gr, n_classes=n_classes)
 
 
 print('Number of model parameters: {}'.format(

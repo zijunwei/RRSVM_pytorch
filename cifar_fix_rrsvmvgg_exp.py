@@ -14,23 +14,24 @@ import argparse
 # from models import *
 import progressbar
 from torch.autograd import Variable
-from models.cifar import res_vgg
+from models.cifar import rrsvm_vgg
 from py_utils import dir_utils
 from pt_utils import t_sets
 import RRSVM.RRSVM as RRSVM
+import RRSVM.RRSVM_utils as RRSVM_utils
 parser = argparse.ArgumentParser(description='PyTorch CIFAR Training on VGG')
-parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
+parser.add_argument('--lr', default=0.0001, type=float, help='learning rate')
 parser.add_argument('--dataset', default='cifar10', type=str, help='dataset = [cifar/cifar100]')
-parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
+parser.add_argument('--resume', type=str, help='resume from checkpoint', required=True)
 parser.add_argument("--gpu_id", default=None, type=int)
 parser.add_argument('--positive_constraint', '-p', action='store_true', help='positivity constraint')
 parser.add_argument('--multiGpu', '-m', action='store_true', help='positivity constraint')
 parser.add_argument('--mbatch_size', default=64, type=int, help='The batch size would be 64, but this can be fractions of 64 to fit into memory ')
-parser.add_argument('--n_epochs', default=350, type=int)
+parser.add_argument('--n_epochs', default=300, type=int)
 parser.add_argument('--id', default=None, type=str, help='The Id of the run')
 parser.add_argument('--verbose', '-v', dest='verbose', action='store_true', help='verbose mode, if not, saved in log.txt')
 args = parser.parse_args()
-identifier = 'ResVgg'
+identifier = 'RRSVMVgg-Fix'
 
 
 best_acc = 0  # best test accuracy
@@ -88,7 +89,8 @@ else:
 print ("Model:{:s}".format(identifier))
 
 
-model = res_vgg.VGG('VGG16_F_O', n_classes=n_classes)
+model = rrsvm_vgg.VGG('VGG16_F_O', n_classes=n_classes)
+#Fix
 
 
 print('Number of model parameters: {}'.format(
@@ -139,19 +141,27 @@ if not args.verbose:
         log_file = os.path.join(save_dir, 'log.txt')
         sys.stdout = open(log_file, "w")
 
-if args.resume:
+if os.path.isfile(args.resume):
     # Load checkpoint.
     print('==> Resuming from checkpoint..')
-    assert os.path.isfile(os.path.join(save_dir, 'ckpt.t7')), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load(os.path.join(save_dir, 'ckpt.t7'), map_location=lambda storage, loc: storage)
+    checkpoint = torch.load(args.resume, map_location=lambda storage, loc: storage)
     state_dict = checkpoint['net']
-    model.load_state_dict(state_dict)
-    best_acc = checkpoint['acc']
-    start_epoch = checkpoint['epoch']
+    RRSVM_utils.load_state_dict(model, state_dict)
+    for s_module in model.features:
+        if not isinstance(s_module, (RRSVM.RRSVM_Module,)):
+            for param in s_module.parameters():
+                param.requires_grad = False
+    # fix the parameter:
+    # for params in model.parameters():
+    #     print(params)
+    # model.load_state_dict(state_dict)
+    # best_acc = checkpoint['acc']
+    # start_epoch = checkpoint['epoch']
 else:
-    print('==> Training from scratch..')
-    if os.path.isfile(os.path.join(save_dir, 'ckpt_result.txt')):
-        os.remove(os.path.join(save_dir, 'ckpt_result.txt'))
+    print('==> Cannot find model')
+    sys.exit(-1)
+
+
 
 
 def train(epoch):
@@ -161,8 +171,8 @@ def train(epoch):
     correct = 0
     total = 0
     total_n = 0
-    # before it was 150, 225 and 300
-    lr = args.lr * (0.1 ** (epoch // 150)) * (0.1 ** (epoch // 225))
+    # before it was 50 for each
+    lr = args.lr * (0.1 ** (epoch // 30)) * (0.1 ** (epoch // 60))
     t_sets.set_lr(optimizer, lr)
     if args.verbose:
         pbar = progressbar.ProgressBar(max_value=n_traindata//train_batch_size)
@@ -205,14 +215,6 @@ def train(epoch):
 
     w_line = '\nTrain:\t {:d}\tLoss: \tAcc: {:.04f}\t{:.04f}\tLR {:0.6f}'.format(epoch, t_loss, t_acc, lr)
     print (w_line)
-    result_file = os.path.join(save_dir, 'ckpt_result.txt')
-    if not os.path.isfile(result_file):
-        with open(result_file, 'w') as f:
-            f.write(w_line)
-    else:
-        with open(result_file, 'a') as f:
-            f.write(w_line)
-    sys.stdout.flush()
 
 def test(epoch):
     global best_acc
