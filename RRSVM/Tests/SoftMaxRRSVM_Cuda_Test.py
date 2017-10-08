@@ -153,8 +153,8 @@ if __name__ == '__main__':
     # the error is always the first elements
     for i in range(100):
         kernel_size = 3
-        n_channel = 5
-        feature_size = 4
+        n_channel = 64
+        feature_size = 5
         padding = 0
         stride = 2
         batch_size = 3
@@ -164,13 +164,13 @@ if __name__ == '__main__':
         input = (Variable(torch.FloatTensor(torch.randn(batch_size, n_channel, feature_size, feature_size)).cuda(), requires_grad=True),
                  Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size**2)).cuda(), requires_grad=True),)
         # print input
-        t_forward = test_forward(input, kernel_size=kernel_size, padding=padding, stride=stride, dilation=1)
+        # t_forward = test_forward(input, kernel_size=kernel_size, padding=padding, stride=stride, dilation=1)
         t_backward = test_gradient(input, kernel_size=kernel_size, padding=padding, stride=stride)
         back_flag = "Fail"
         forward_flag = 'Fail'
         if t_backward:
             back_flag = "Pass"
-        if t_forward:
-            forward_flag = "Pass"
+        # if t_forward:
+        #     forward_flag = "Pass"
 
         print "[{:03d} | {:03d}]\tFoward:{:s}; Backward:{:s}".format(i, 100, forward_flag, back_flag)
