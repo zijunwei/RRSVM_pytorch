@@ -22,7 +22,7 @@ parser = argparse.ArgumentParser(description='PyTorch CIFAR Training on VGG')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--dataset', default='cifar10', type=str, help='dataset = [cifar/cifar100]')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
-parser.add_argument("--gpu_id", default=None, type=int)
+parser.add_argument("--gpu_id", default=None, type=str)
 parser.add_argument('--positive_constraint', '-p', action='store_true', help='positivity constraint')
 parser.add_argument('--multiGpu', '-m', action='store_true', help='positivity constraint')
 parser.add_argument('--mbatch_size', default=64, type=int, help='The batch size would be 64, but this can be fractions of 64 to fit into memory ')
@@ -30,7 +30,7 @@ parser.add_argument('--n_epochs', default=350, type=int)
 parser.add_argument('--id', default=None, type=str, help='The Id of the run')
 parser.add_argument('--verbose', '-v', dest='verbose', action='store_true', help='verbose mode, if not, saved in log.txt')
 args = parser.parse_args()
-identifier = 'ResVgg'
+identifier = 'ResVgg_0Init'
 
 
 best_acc = 0  # best test accuracy

@@ -1,7 +1,7 @@
 import torch
 # from torch.nn.modules.utils import _pair
 from torch.nn.parameter import Parameter
-from _ext import RRSVM
+from _ext import SoftMaxRRSVM
 import numpy as np
 from torch.autograd import Variable
 import torch.nn as nn
@@ -31,11 +31,11 @@ class RRSVM_F(torch.autograd.Function):
             raise RuntimeError('Currently RRSVM only supports 2D convolution')
 
         input = input.contiguous()
+
         s = s.contiguous()
-        #TODO: This is the core function
-        output, indices = self._update_output(input, s)
-        self.intermediate = (input, s, indices,)
-        # self.save_for_backward(input, s)
+        #TODO: softmax_s is added
+        output, indices, softmax_s = self._update_output(input, s)
+        self.intermediate = (input, s, indices, softmax_s)
         if self.return_indices:
             self.mark_non_differentiable(indices)
         return (output, indices,) if self.return_indices else output
@@ -48,11 +48,12 @@ class RRSVM_F(torch.autograd.Function):
 
         grad_output = grad_output.contiguous()
 
-        input, s, indices = self.intermediate
+        input, s, indices, softmax_s  = self.intermediate
         input = input.contiguous()
 
-        grad_input = (self._grad_input(input, s, indices, grad_output) if self.needs_input_grad[0] else None)
-        grad_s = (self._grad_params(input, s, indices, grad_output) if self.needs_input_grad[1] else None)
+        grad_input = (self._grad_input(input, softmax_s, indices, grad_output) if self.needs_input_grad[0] else None)
+        grad_s = (self._grad_params(input,  s, softmax_s,indices, grad_output) if self.needs_input_grad[1] else None)
+        # grad_s = s_m.backward(grad_s_m)
         # print "Grad_input and grad_s in backward situation"
         # print grad_input
         # print grad_s
@@ -61,42 +62,46 @@ class RRSVM_F(torch.autograd.Function):
     def _update_output(self, input, s):
         output = input.new(*self._output_size(input, s))
         indices = input.new(*self._indices_size(input, s)).long()
+        softmax_s = input.new(*s.size())
         if not input.is_cuda:
-            RRSVM.RRSVM_updateOutput(input, s, output, indices, self.kernel_size, self.kernel_size, self.stride, self.stride,
+            SoftMaxRRSVM.RRSVM_updateOutput(input, s,  softmax_s, output, indices, self.kernel_size, self.kernel_size, self.stride, self.stride,
                                            self.padding, self.padding, self.dilation, self.dilation)
         else:
-            RRSVM.RRSVM_updateOutput_cuda(input, s, output, indices, self.kernel_size, self.kernel_size, self.stride, self.stride,
+            # raise NotImplementedError
+            SoftMaxRRSVM.RRSVM_updateOutput_cuda(input, s, softmax_s, output, indices, self.kernel_size, self.kernel_size, self.stride, self.stride,
                                            self.padding, self.padding, self.dilation, self.dilation)
 
-        return output, indices
+        return output, indices, softmax_s
 
     def _grad_input(self, input, s, indices, grad_output):
         grad_input = input.new(*input.size())
         if not grad_output.is_cuda:
-            RRSVM.RRSVM_updateGradInput(s, indices, grad_output, grad_input, input.size(3), input.size(2),
+            SoftMaxRRSVM.RRSVM_updateGradInput(s, indices, grad_output, grad_input, input.size(3), input.size(2),
                                               self.kernel_size, self.kernel_size, self.stride, self.stride, self.padding, self.padding,
                                               self.dilation, self.dilation)
         else:
-            RRSVM.RRSVM_updateGradInput_cuda(s, indices, grad_output, grad_input, input.size(3), input.size(2),
+            # raise NotImplementedError
+            SoftMaxRRSVM.RRSVM_updateGradInput_cuda(s, indices, grad_output, grad_input, input.size(3), input.size(2),
                                               self.kernel_size, self.kernel_size, self.stride, self.stride, self.padding, self.padding,
                                               self.dilation, self.dilation)
-            # grad_input = 0
-            # print grad_input
+
         return grad_input
 
-    def _grad_params(self, input, s, indices, grad_output):
+    def _grad_params(self, input, s, softmax_s, indices, grad_output):
         #TODO: Core function for getting output value here
         grad_s = s.new(*s.size())
+        grad_softmax_s = softmax_s.new(*softmax_s.size())
         if not grad_output.is_cuda:
-            RRSVM.RRSVM_accGradParameters(input, indices, grad_output, grad_s, self.kernel_size, self.kernel_size,
+            SoftMaxRRSVM.RRSVM_accGradParameters(input, softmax_s, indices, grad_output, grad_s, grad_softmax_s, self.kernel_size, self.kernel_size,
                                                 self.stride, self.stride, self.padding, self.padding,
                                                 self.dilation, self.dilation)
         else:
-            RRSVM.RRSVM_accGradParameters_cuda(input, indices, grad_output, grad_s, self.kernel_size, self.kernel_size,
+            # raise NotImplementedError
+            SoftMaxRRSVM.RRSVM_accGradParameters_cuda(input, softmax_s, indices, grad_output, grad_s, grad_softmax_s, self.kernel_size, self.kernel_size,
                                                 self.stride, self.stride, self.padding, self.padding,
                                                 self.dilation, self.dilation)
             # print grad_s
-        return grad_s
+        return grad_softmax_s
 
     def _output_size(self, input, s):
         bs = input.size(0)
@@ -132,26 +137,11 @@ class RRSVM_F(torch.autograd.Function):
         return indices_size
 
 
-def random_init_s(s):
-        n_elt = s.data.size(0) * s.data.size(1)
-        s.data.normal_(0, math.sqrt(2. / n_elt))
-
-def avg_init_s(s):
-        n_elt = s.data.size(1)
-        init_val = 1. / n_elt
-        s.data.fill_(init_val)
-
-def max_init_s(s):
-        s.data.fill_(0.)
-        s.data[:, 0] = 1.
-
-init_fns = {'random': random_init_s, 'max': max_init_s, 'avg': avg_init_s}
-
 class RRSVM_Module(torch.nn.Module):
     # comapred to convolution:
     # __init__(self, in_channels, out_channels, kernel_size, stride=1,
              # padding=0, dilation=1, groups=1, bias=True):
-    def __init__(self, in_channels, kernel_size, init='max', stride=None, padding=0, dilation=1, p_constraint=False, return_indices=False):
+    def __init__(self, in_channels, kernel_size, stride=None, padding=0, dilation=1, p_constraint=False, return_indices=False):
         super(RRSVM_Module, self).__init__()
         self.kernel_size = kernel_size
         if stride is not None:
@@ -162,14 +152,9 @@ class RRSVM_Module(torch.nn.Module):
         self.padding = padding
         self.dilation = dilation
         self.s = Parameter(torch.Tensor(in_channels, self.kernel_size * self.kernel_size))
-        init_fn = init_fns[init.lower()]
-        init_fn(self.s)
-
+        n_elt = self.s.data.size(0) * self.s.data.size(1)
+        self.s.data.normal_(0, math.sqrt(2. / n_elt))
         self.p_constraint = p_constraint
-
-    def update_s(self, update='max'):
-        init_fn = init_fns[update.lower()]
-        init_fn(self.s)
 
     def forward(self, input):
         # if self.p_constraint:
@@ -192,7 +177,7 @@ def RRSVM_Loss(net):
     #2. L2 norm might not be good, because we want different feature map to have different weights
     #3. Non-incremental
     for id, s_module in enumerate(net.modules()):
-        if isinstance(s_module, RRSVM):
+        if isinstance(s_module, RRSVM_Module):
           loss += loss_fn(s_module.s)
     return loss
 
@@ -216,17 +201,17 @@ class RRSVM_MonoClipper(object):
 
 if __name__ == '__main__':
     #TODO: TEST Starting HERE!
-    RRSVM_block = RRSVM_Module(in_channels=3, kernel_size=3, stride=1)
+    RRSVM_block = RRSVM_Module(in_channels=1, kernel_size=3, stride=1, return_indices=False)
     RRSVM_block.cuda()
     x_data = np.array(np.random.randn(9))
     x_idx = np.argsort(-x_data)
-    x = torch.FloatTensor(x_data).resize_([1, 3, 3, 3]).cuda()
+    x = torch.FloatTensor(x_data).resize_([1, 1, 3, 3]).cuda()
     y = Variable(torch.FloatTensor([1]).cuda(), requires_grad=False)
     input_x = Variable(x)
 
     # forward:
-
-    output= RRSVM_block(input_x)
+    output = RRSVM_block(input_x)
+    print "Output Passed!"
     s_output = torch.squeeze(output)
     # backward:
     loss_fn = torch.nn.MSELoss()

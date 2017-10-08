@@ -1,11 +1,12 @@
 import torchvision.models
-import RRSVM.RRSVM as RRSVM
+import RRSVM.SoftMax_RRSVM as RRSVM
 from torch.autograd import Variable
 import torch
 # from torch.autograd import gradcheck
 from RRSVM.Tests.MyGradCheck import gradcheck
 import numpy as np
 import sys
+import torch.nn.functional as Functional
 
 
 def test_gradient(input, kernel_size=3, padding=0, stride=1):
@@ -90,6 +91,7 @@ def get_numerical_output(input, s, kernel_size=3, padding=0, stride=1, dilation=
 
     if isinstance(input, (Variable, torch.Tensor)):
         input = input.data.numpy()
+        s = Functional.softmax(s)
         s = s.data.numpy()
 
     input_n = input.shape[0]

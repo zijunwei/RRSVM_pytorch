@@ -14,24 +14,31 @@ import argparse
 # from models import *
 import progressbar
 from torch.autograd import Variable
-from models.cifar import res_inception
+from models.cifar import ft_vgg
 from py_utils import dir_utils
 from pt_utils import t_sets
 import RRSVM.RRSVM as RRSVM
-parser = argparse.ArgumentParser(description='PyTorch CIFAR Training on Inception')
+import RRSVM.RRSVM_utils as RRSVM_utils
+
+parser = argparse.ArgumentParser(description='PyTorch CIFAR Training on VGG using RRSVM with Finetuning')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--dataset', default='cifar10', type=str, help='dataset = [cifar/cifar100]')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
+parser.add_argument('--finetune', '-ft', type=str, default=None, dest='finetune', help='finetune from corresponding VGG but with Max or Avg Pooling')
+
 parser.add_argument("--gpu_id", default=None, type=str)
 parser.add_argument('--positive_constraint', '-p', action='store_true', help='positivity constraint')
 parser.add_argument('--multiGpu', '-m', action='store_true', help='positivity constraint')
 parser.add_argument('--mbatch_size', default=64, type=int, help='The batch size would be 64, but this can be fractions of 64 to fit into memory ')
-parser.add_argument('--n_epochs', default=350, type=int)
+parser.add_argument('--n_epochs', default=50, type=int)
 parser.add_argument('--id', default=None, type=str, help='The Id of the run')
 parser.add_argument('--verbose', '-v', dest='verbose', action='store_true', help='verbose mode, if not, saved in log.txt')
+parser.add_argument('-rwd', dest='rwd', action='store_true', help='remove weight decay on top of it' )
 args = parser.parse_args()
-identifier = 'ResInception'
 
+identifier = 'RRSVM_ft'
+if args.rwd:
+    identifier = identifier + '_rwd'
 
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
@@ -88,14 +95,28 @@ else:
 print ("Model:{:s}".format(identifier))
 
 
-model = res_inception.GoogLeNet(n_classes=n_classes)
+model = ft_vgg.VGG('VGG16_F_O', n_classes=n_classes)
 
 
 print('Number of model parameters: {}'.format(
         sum([p.data.nelement() for p in model.parameters()])))
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(filter(lambda p:p.requires_grad, model.parameters()), lr=args.lr, momentum=0.9, weight_decay=1e-4) # was 5e-4 before
+
+# not enforce weight decay on it!
+if args.rwd:
+    params_dict = dict(model.features.named_parameters())
+    params =[]
+    for key, value in params_dict.items():
+        if key[-2:] == '.s':
+            params += [{'params': [value], 'weight_decay': 0.0, 'lr': args.lr * 10}]
+        else:
+            params += [{'params': [value], 'weight_decay': 1e-4}]
+
+    optimizer = optim.SGD(params, lr=args.lr, momentum=0.9,
+                              weight_decay=1e-4)  # was 5e-4 before
+else:
+    optimizer = optim.SGD(filter(lambda p:p.requires_grad, model.parameters()), lr=args.lr, momentum=0.9, weight_decay=1e-4) # was 5e-4 before
 
 
 p_constraint = False
@@ -149,7 +170,18 @@ if args.resume:
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
 else:
-    print('==> Training from scratch..')
+
+    if args.finetune is not None:
+        print('==> Finetune from {:s}..'.format(args.finetune))
+        assert os.path.isfile(os.path.join(args.finetune, 'ckpt.t7')), 'Error: no checkpoint directory found!'
+        checkpoint = torch.load(os.path.join(args.finetune, 'ckpt.t7'), map_location=lambda storage, loc: storage)
+        state_dict = checkpoint['net']
+        RRSVM_utils.load_state_dict(model, state_dict)
+
+    else:
+        print('==> Training from scratch.. Please check')
+
+
     if os.path.isfile(os.path.join(save_dir, 'ckpt_result.txt')):
         os.remove(os.path.join(save_dir, 'ckpt_result.txt'))
 

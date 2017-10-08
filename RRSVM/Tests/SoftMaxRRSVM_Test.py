@@ -1,11 +1,11 @@
 import torchvision.models
-import RRSVM.RRSVM as RRSVM
+import RRSVM.SoftMax_RRSVM as RRSVM
 from torch.autograd import Variable
 import torch
 # from torch.autograd import gradcheck
 from RRSVM.Tests.MyGradCheck import gradcheck
 import numpy as np
-
+import torch.nn.functional as F
 # TODO: May be you need the S to be 2D ...
 # TODO: Think about padding case with zero
 
@@ -38,7 +38,7 @@ def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
     else:
         print "Ouput Pass Foward Test"
 
-    if not (np.absolute(numerical - analytical) <= (atol + rtol * np.absolute(numerical))).all():
+    if not (np.absolute(analytical_indices - numerical_indices) <= (atol + rtol * np.absolute(numerical))).all():
         print "Indices Failed Foward Test"
     else:
         print "Indices Pass Foward Test"
@@ -50,6 +50,7 @@ def get_numerical_output(input, s, kernel_size=3, padding=0, stride=1, dilation=
 
     if isinstance(input, (Variable, torch.Tensor)):
         input = input.data.numpy()
+        s = F.softmax(s)
         s = s.data.numpy()
 
     input_n = input.shape[0]
@@ -109,9 +110,9 @@ def pad2d(array2d, padding):
 
 if __name__ == '__main__':
     # test_gradient()
-    kernel_size = 2
-    n_channel = 1
-    feature_size = 2
+    kernel_size = 3
+    n_channel = 2
+    feature_size = 3
     input = (Variable(torch.FloatTensor(torch.randn(1, n_channel, feature_size, feature_size)), requires_grad=True),
              Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size**2)), requires_grad=True),)
     # test_gradient(input)

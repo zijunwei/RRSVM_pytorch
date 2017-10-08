@@ -153,7 +153,6 @@ def gradcheck(func, inputs, eps=1e-6, atol=1e-5, rtol=1e-3):
             # else:
                 # print "{:d}th Input Grad is None problematic".format(k)
 
-
     # check if the backward multiplies by grad_output
     zero_gradients(inputs)
     output = _as_tuple(func(*inputs))

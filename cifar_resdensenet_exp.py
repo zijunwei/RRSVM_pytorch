@@ -24,7 +24,7 @@ parser.add_argument('--gr', default=12, type=int, help='growth rate of DenseNet'
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--dataset', default='cifar10', type=str, help='dataset = [cifar/cifar100]')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
-parser.add_argument("--gpu_id", default=None, type=int)
+parser.add_argument("--gpu_id", default=None, type=str)
 parser.add_argument('--positive_constraint', '-p', action='store_true', help='positivity constraint')
 parser.add_argument('--multiGpu', '-m', action='store_true', help='positivity constraint')
 parser.add_argument('--mbatch_size', default=64, type=int, help='The batch size would be 64, but this can be fractions of 64 to fit into memory ')

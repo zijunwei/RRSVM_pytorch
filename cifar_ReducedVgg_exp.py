@@ -14,11 +14,11 @@ import argparse
 # from models import *
 import progressbar
 from torch.autograd import Variable
-from models.cifar import res_inception
+from models.cifar import reduced_vgg
 from py_utils import dir_utils
 from pt_utils import t_sets
 import RRSVM.RRSVM as RRSVM
-parser = argparse.ArgumentParser(description='PyTorch CIFAR Training on Inception')
+parser = argparse.ArgumentParser(description='PyTorch CIFAR Training on Reduced VGG')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--dataset', default='cifar10', type=str, help='dataset = [cifar/cifar100]')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
@@ -30,7 +30,7 @@ parser.add_argument('--n_epochs', default=350, type=int)
 parser.add_argument('--id', default=None, type=str, help='The Id of the run')
 parser.add_argument('--verbose', '-v', dest='verbose', action='store_true', help='verbose mode, if not, saved in log.txt')
 args = parser.parse_args()
-identifier = 'ResInception'
+identifier = 'ReducedVgg'
 
 
 best_acc = 0  # best test accuracy
@@ -88,7 +88,7 @@ else:
 print ("Model:{:s}".format(identifier))
 
 
-model = res_inception.GoogLeNet(n_classes=n_classes)
+model = reduced_vgg.VGG(n_classes=n_classes)
 
 
 print('Number of model parameters: {}'.format(
