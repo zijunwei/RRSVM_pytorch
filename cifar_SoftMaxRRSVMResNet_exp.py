@@ -29,9 +29,16 @@ parser.add_argument('--mbatch_size', default=64, type=int, help='The batch size 
 parser.add_argument('--n_epochs', default=350, type=int)
 parser.add_argument('--id', default=None, type=str, help='The Id of the run')
 parser.add_argument('--verbose', '-v', dest='verbose', action='store_true', help='verbose mode, if not, saved in log.txt')
-args = parser.parse_args()
-identifier = 'SoftMaxResNetXT'
+parser.add_argument('--baseline', '-b', dest='baseline', action='store_true', help='using baseline')
 
+args = parser.parse_args()
+if args.baseline:
+    identifier='ResNetXT'
+else:
+    identifier = 'SoftMaxResNetXT'
+
+if args.id is not None:
+    identifier = identifier + '_' + args.id
 
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
@@ -87,8 +94,12 @@ else:
 
 print ("Model:{:s}".format(identifier))
 
+if args.baseline:
+    useRRSVM = False
+else:
+    useRRSVM = True
 
-model = SoftMaxRRSVM_ResNetXt.ResNeXt29_2x64d(n_classes=n_classes, useRRSVM=True)
+model = SoftMaxRRSVM_ResNetXt.ResNeXt29_2x64d(n_classes=n_classes, useRRSVM = useRRSVM)
 
 
 print('Number of model parameters: {}'.format(
@@ -99,7 +110,7 @@ optimizer = optim.SGD(filter(lambda p:p.requires_grad, model.parameters()), lr=a
 
 
 p_constraint = False
-if args.positive_constraint:
+if args.positive_constraint and not args.baseline:
     p_constraint = True
     positive_clipper = RRSVM.RRSVM_PositiveClipper()
 
