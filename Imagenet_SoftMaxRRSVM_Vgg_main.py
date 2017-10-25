@@ -282,9 +282,17 @@ def validate(epoch):
                    i, len(val_loader), batch_time=batch_time, loss=losses,
                    top1=top1, top5=top5))
 
-    print(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
+    w_line =(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
           .format(top1=top1, top5=top5))
-
+    print(w_line)
+    result_file = os.path.join(save_dir, 'ckpt_result.txt')
+    if not os.path.isfile(result_file):
+        with open(result_file, 'w') as f:
+            f.write(w_line)
+    else:
+        with open(result_file, 'a') as f:
+            f.write(w_line)
+    sys.stdout.flush()
     return top1.avg, top5.avg
 
 

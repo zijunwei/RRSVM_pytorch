@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import RRSVM.RRSVM as RRSVM
-
+import torchvision.models
 
 # M: MaxPooling, O: OrderedWeightedAveraging, A: AvgPooling
 cfg = {
