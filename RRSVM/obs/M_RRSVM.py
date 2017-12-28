@@ -1,7 +1,7 @@
 import torch
 # from torch.nn.modules.utils import _pair
 from torch.nn.parameter import Parameter
-from _ext import RRSVM
+from RRSVM._ext import RRSVM
 import numpy as np
 from torch.autograd import Variable
 import torch.nn as nn

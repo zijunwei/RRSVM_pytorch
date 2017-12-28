@@ -6,11 +6,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
-from RRSVM.SoftMax_RRSVM import RRSVM_Module as SoftRRSVM_Module  # SoftMax RRSVM
-from RRSVM.RRSVM import RRSVM_Module as RRSVM_Module # RRSVM
-from py_utils import dir_utils
-import os
-
+from RRSVM.SoftMax_RRSVM import RRSVM_Module
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
 parser.add_argument('--batch-size', type=int, default=64, metavar='N',
@@ -36,17 +32,17 @@ torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
-dataset_root = dir_utils.get_dir(os.path.join(os.path.expanduser('~'), 'datasets', 'RRSVM_datasets'))
+
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 train_loader = torch.utils.data.DataLoader(
-    datasets.MNIST(dataset_root, train=True, download=True,
+    datasets.MNIST('../data', train=True, download=True,
                    transform=transforms.Compose([
                        transforms.ToTensor(),
                        transforms.Normalize((0.1307,), (0.3081,))
                    ])),
     batch_size=args.batch_size, shuffle=True, **kwargs)
 test_loader = torch.utils.data.DataLoader(
-    datasets.MNIST(dataset_root, train=False, transform=transforms.Compose([
+    datasets.MNIST('../data', train=False, transform=transforms.Compose([
                        transforms.ToTensor(),
                        transforms.Normalize((0.1307,), (0.3081,))
                    ])),
@@ -76,9 +72,9 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
         self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
-        self.pool1 = SoftRRSVM_Module(in_channels=10, kernel_size=3, stride=2, padding=1)
+        self.pool1 = RRSVM_Module(in_channels=10, kernel_size=3, stride=2, padding=1)
         self.conv2_drop = nn.Dropout2d()
-        self.pool2 = SoftRRSVM_Module(in_channels=20, kernel_size=3, stride=2, padding=1)
+        self.pool2 = RRSVM_Module(in_channels=20, kernel_size=3, stride=2, padding=1)
         self.fc1 = nn.Linear(320, 50)
         self.fc2 = nn.Linear(50, 10)
 
