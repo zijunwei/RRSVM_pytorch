@@ -176,7 +176,8 @@ void RRSVM_accGradParameters_cuda(THCudaTensor *input, THCudaTensor *softmax_s, 
     softmax_s_data = THCudaTensor_data(state, softmax_s);
 
     //This is not approprate for add?
-    for (int elt = 0; elt < batchSize; elt ++) {
+    int elt;
+    for (elt = 0; elt < batchSize; elt ++) {
 
         THCudaTensor *input_d_h_w = THCudaTensor_new(state);
         THCudaTensor_select(state, input_d_h_w, input, 0, elt);

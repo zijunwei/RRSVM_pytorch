@@ -14,12 +14,13 @@ static void THNN_Floatim2col(const real* data_im, const int channels,
     const long width_col = (width + 2 * pad_w -
                             (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
     const int channels_col = channels * kernel_h * kernel_w;
-    for (int c_col = 0; c_col < channels_col; ++c_col) {
+    int c_col, h_col, w_col;
+    for (c_col = 0; c_col < channels_col; ++c_col) {
         int w_offset = c_col % kernel_w;
         int h_offset = (c_col / kernel_w) % kernel_h;
         int c_im = c_col / kernel_h / kernel_w;
-        for (int h_col = 0; h_col < height_col; ++h_col) {
-            for (int w_col = 0; w_col < width_col; ++w_col) {
+        for (h_col = 0; h_col < height_col; ++h_col) {
+            for (w_col = 0; w_col < width_col; ++w_col) {
                 int h_im = h_col * stride_h - pad_h + h_offset * dilation_h;
                 int w_im = w_col * stride_w - pad_w + w_offset * dilation_w;
                 data_col[(c_col * height_col + h_col) * width_col + w_col] =
@@ -42,12 +43,13 @@ static void THNN_Floatcol2im(const real* data_col, const int channels,
     const long height_col = output_height;
     const long width_col = output_width;
     const int channels_col = channels * kernel_h * kernel_w;
-    for (int c_col = 0; c_col < channels_col; ++c_col) {
+    int c_col, h_col, w_col;
+    for (c_col = 0; c_col < channels_col; ++c_col) {
         int w_offset = c_col % kernel_w;
         int h_offset = (c_col / kernel_w) % kernel_h;
         int c_im = c_col / kernel_h / kernel_w;
-        for (int h_col = 0; h_col < height_col; ++h_col) {
-            for (int w_col = 0; w_col < width_col; ++w_col) {
+        for (h_col = 0; h_col < height_col; ++h_col) {
+            for (w_col = 0; w_col < width_col; ++w_col) {
                 int h_im = h_col * stride_h - pad_h + h_offset * dilation_h;
                 int w_im = w_col * stride_w - pad_w + w_offset * dilation_w;
                 if (h_im >= 0 && h_im < height && w_im >= 0 && w_im < width)
@@ -215,8 +217,8 @@ void RRSVM_updateGradInput(THFloatTensor *s, THLongTensor *indices, THFloatTenso
 
         THFloatTensor_select(gradinput_d_h_w, gradInput, 0, elt);
 
-
-        for (int chl = 0; chl < nInputPlane; chl ++){
+        int chl;
+        for (chl = 0; chl < nInputPlane; chl ++){
             THFloatTensor *gradinput_h_w = THFloatTensor_new();
 
             THFloatTensor_select(gradinput_h_w, gradinput_d_h_w, 0, chl);
@@ -340,11 +342,12 @@ void RRSVM_accGradParameters(THFloatTensor *input, THFloatTensor *softmax_s, THL
 #pragma omp parallel for private(chl)
     for (chl = 0; chl < nInputPlane; chl ++){
         float sum = 0;
-        for (int d = 0; d < kH*kW; d++){
+        int d;
+        for (d = 0; d < kH*kW; d++){
             sum += gradS_data[chl*kW*kH + d] * softmax_s_data[chl*kW*kH + d];
 
         }
-        for (int d = 0; d < kH*kW; d++){
+        for (d = 0; d < kH*kW; d++){
             gradSoftmaxS_data[chl*kW*kH + d] = softmax_s_data[chl*kW*kH + d] * (gradS_data[chl*kW*kH + d] - sum);
         }
     }
