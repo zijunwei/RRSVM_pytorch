@@ -145,7 +145,15 @@ def max_init_s(s):
         s.data.fill_(0.)
         s.data[:, 0] = 1.
 
-init_fns = {'random': random_init_s, 'max': max_init_s, 'avg': avg_init_s}
+def eps_max_init_s(s):
+    n_elt = s.data.size(1)
+    eps = 0.1
+    s.data.fill_(eps/n_elt)
+    s.data[:, 0] += 1. - eps
+
+
+init_fns = {'random': random_init_s, 'max': max_init_s, 'avg': avg_init_s, 'eps_max': eps_max_init_s}
+
 
 class RRSVM_Module(torch.nn.Module):
     # comapred to convolution:
