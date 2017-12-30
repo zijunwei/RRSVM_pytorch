@@ -28,7 +28,7 @@ parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 64)')
 parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
                     help='input batch size for testing (default: 1000)')
-parser.add_argument('--epochs', type=int, default=50, metavar='N',
+parser.add_argument('--epochs', type=int, default=20, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='learning rate (default: 0.01)')
@@ -40,6 +40,9 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
+parser.add_argument('--pool-method', default='RRSVM',
+                    help='pooling method (max|RRSVM|SoftRRSVM) (default: RRSVM)')
+
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -98,59 +101,72 @@ def progress_bar(k,n, prefix_message='Progress', post_message='', start_time=Non
     # sys.stdout.flush()
 
 
-
-
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
-        self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
-        self.conv2_drop = nn.Dropout2d()
-        self.fc1 = nn.Linear(320, 50)
-        self.fc2 = nn.Linear(50, 10)
-
-    def forward(self, x):
-        ksize = 9
-        psize = (ksize-1)/2
-        x = F.relu(F.max_pool2d(self.conv1(x), kernel_size=ksize, stride=2, padding=psize))
-        x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), kernel_size=ksize, stride=2,padding=psize))
-        x = x.view(-1, 320)
-        x = F.relu(self.fc1(x))
-        x = F.dropout(x, training=self.training)
-        x = self.fc2(x)
-        return F.log_softmax(x)
-
-# class Net(nn.Module):
+# class MaxPoolNet(nn.Module):
 #     def __init__(self):
-#         super(Net, self).__init__()
+#         super(MaxPoolNet, self).__init__()
 #         self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
 #         self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
-#         self.pool1 = SoftRRSVM_Module(in_channels=10, kernel_size=2, stride=2, padding=0)
 #         self.conv2_drop = nn.Dropout2d()
-#         self.pool2 = SoftRRSVM_Module(in_channels=20, kernel_size=2, stride=2, padding=0)
 #         self.fc1 = nn.Linear(320, 50)
 #         self.fc2 = nn.Linear(50, 10)
 #
 #     def forward(self, x):
-#         # x = F.relu(F.max_pool2d(self.conv1(x), 2))
-#         x = self.conv1(x)
-#         x = self.pool1(x)
-#         x = F.relu(x)
-#
-#         # x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-#         x = self.conv2(x)
-#         x = self.conv2_drop(x)
-#         x = self.pool2(x)
-#         x = F.relu(x)
-#
+#         ksize = 2
+#         psize = (ksize-1)/2
+#         x = F.relu(F.max_pool2d(self.conv1(x), kernel_size=ksize, stride=2, padding=psize))
+#         x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), kernel_size=ksize, stride=2,padding=psize))
 #         x = x.view(-1, 320)
 #         x = F.relu(self.fc1(x))
 #         x = F.dropout(x, training=self.training)
 #         x = self.fc2(x)
-#         # return x
 #         return F.log_softmax(x)
 
-model = Net()
+class Net(nn.Module):
+    def __init__(self, pool_method):
+        ksize = 2
+        psize = (ksize-1)/2
+        d1 = 1
+        d2 = 1
+        d3 = 50
+        self.d2b = 16*d2
+
+        super(Net, self).__init__()
+        self.conv1 = nn.Conv2d(1, d1, kernel_size=5)
+        self.conv2 = nn.Conv2d(d1, d2, kernel_size=5)
+        if pool_method == 'max':
+            self.pool1 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
+            self.pool2 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
+        elif pool_method == 'RRSVM':
+            self.pool1 = RRSVM_Module(in_channels=d1, init='eps_max', kernel_size=ksize, stride=2, padding=psize)
+            self.pool2 = RRSVM_Module(in_channels=d2, init='eps_max', kernel_size=ksize, stride=2, padding=psize)
+        elif pool_method == 'SoftRRSVM':
+            self.pool1 = SoftRRSVM_Module(in_channels=d1, kernel_size=ksize, stride=2, padding=psize)
+            self.pool2 = SoftRRSVM_Module(in_channels=d2, kernel_size=ksize, stride=2, padding=psize)
+
+        self.conv2_drop = nn.Dropout2d()
+        self.fc1 = nn.Linear(self.d2b, d3)
+        self.fc2 = nn.Linear(d3, 10)
+
+    def forward(self, x):
+        # x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        x = self.conv1(x)
+        x = self.pool1(x)
+        x = F.relu(x)
+
+        # x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
+        x = self.conv2(x)
+        x = self.conv2_drop(x)
+        x = self.pool2(x)
+        x = F.relu(x)
+
+        x = x.view(-1, self.d2b)
+        x = F.relu(self.fc1(x))
+        x = F.dropout(x, training=self.training)
+        x = self.fc2(x)
+        # return x
+        return F.log_softmax(x)
+
+model = Net(pool_method=args.pool_method)
 if args.cuda:
     model.cuda()
 print("Number of Params:\t{:d}".format(sum([p.data.nelement() for p in model.parameters()])))
