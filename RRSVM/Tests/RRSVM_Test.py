@@ -16,15 +16,12 @@ def test_gradient(input, kernel_size=3, padding=0, stride=1):
 
     test = gradcheck(lambda i, s: F(i, s), inputs=input, eps=1e-3, atol=1e-3, rtol=1e-3)
     if test == True:
-        print("Gradient Check Passed!")
+        print("Passed. Gradient Check Passed!")
     else:
-        print("Gradient Check Failed!")
+        print("Failed. Gradient Check Failed!")
 
 
 def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
-    # input = (Variable(torch.FloatTensor(torch.randn(1, 1, 5, 5)), requires_grad=True),
-    #          Variable(torch.FloatTensor(torch.randn(1, 9)), requires_grad=True),)
-
     F = RRSVM.RRSVM_F(kernel_size, padding, stride, dilation=1, return_indices=True)
     analytical, analytical_indices = F(*input)
     analytical = analytical.data.numpy()
@@ -34,14 +31,16 @@ def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
     atol = 1e-5
     rtol = 1e-3
     if not (np.absolute(numerical - analytical) <= (atol + rtol * np.absolute(numerical))).all():
-        print "Output Failed Foward Test"
+        print "Failed. Output Failed Foward Test"
     else:
-        print "Ouput Pass Foward Test"
+        print "Passed. Ouput Pass Foward Test"
 
-    if not (np.absolute(numerical - analytical) <= (atol + rtol * np.absolute(numerical))).all():
-        print "Indices Failed Foward Test"
+    # Minh: Seems like a bug. This code does not test the indices
+    # if not (np.absolute(numerical - analytical) <= (atol + rtol * np.absolute(numerical))).all():
+    if not (numerical_indices == analytical_indices).all():
+        print "Failed. Indices Failed Foward Test"
     else:
-        print "Indices Pass Foward Test"
+        print "Passed. Indices Pass Foward Test"
     # test = gradcheck(lambda i, s: F(i, s), inputs=input, eps=1e-6, atol=1e-4)
     # print "DONE"
 
@@ -90,11 +89,6 @@ def get_numerical_output(input, s, kernel_size=3, padding=0, stride=1, dilation=
     return output, output_indices
 
 
-
-# def get_numerical_gradInput():
-
-
-
 def pad2d(array2d, padding):
     if padding == 0:
         return array2d
@@ -107,19 +101,70 @@ def pad2d(array2d, padding):
     new_array[padding:new_array_shape[0]-padding, padding:new_array_shape[1]-padding] = array2d
     return new_array
 
-if __name__ == '__main__':
-    # test_gradient()
-    kernel_size = 2
-    n_channel = 1
-    feature_size = 2
-    input = (Variable(torch.FloatTensor(torch.randn(1, n_channel, feature_size, feature_size)), requires_grad=True),
-             Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size**2)), requires_grad=True),)
-    # test_gradient(input)
-    # test_forward(input, kernel_size=3, padding=0, stride=3)
-    # output, output_indices = get_numerical_output(*input,kernel_size=3, padding=0, stride=3)
-    # print "Input\n"
-    # print input
-    # print 'Output\n'
-    # print output
+
+
+# use random inputs
+def test1(case_id):
+    if case_id == 1:
+        n_im = 1
+        kernel_size = 2
+        n_channel = 1
+        feature_size = 2
+    elif case_id == 2:
+        n_im = 2
+        kernel_size = 2
+        n_channel = 3
+        feature_size = 28
+    elif case_id == 3:
+        n_im = 1
+        kernel_size = 5
+        n_channel = 10
+        feature_size = 14
+    elif case_id == 4:
+        n_im = 4
+        kernel_size = 3
+        n_channel = 2
+        feature_size = 10
+    elif case_id == 5:
+        n_im = 8
+        kernel_size = 2
+        n_channel = 3
+        feature_size = 14
+
+    input = (Variable(torch.FloatTensor(torch.randn(n_im, n_channel, feature_size, feature_size)), requires_grad=True),
+             Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size ** 2)), requires_grad=True),)
     test_forward(input, kernel_size=kernel_size, padding=0, stride=kernel_size, dilation=1)
     test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)
+
+
+# use random non-negative inputs
+def test2(case_id):
+    if case_id == 1:
+        kernel_size = 2
+        n_channel = 1
+        feature_size = 2
+    elif case_id == 2:
+        kernel_size = 2
+        n_channel = 3
+        feature_size = 7
+    elif case_id == 3:
+        kernel_size = 5
+        n_channel = 10
+        feature_size = 14
+
+    A = torch.randn(1, n_channel, feature_size, feature_size)
+    A[A < 0] = 0.0
+    input = (Variable(torch.FloatTensor(A), requires_grad=True),
+             Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size ** 2)), requires_grad=True),)
+    test_forward(input, kernel_size=kernel_size, padding=0, stride=kernel_size, dilation=1)
+    test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)
+
+
+if __name__ == '__main__':
+    for ii in range(5):
+        print("---- Test 1, Case {}".format(ii+1))
+        test1(ii+1)
+
+    for ii in range(3):
+        print("---- Test 2, Case {}".format(ii+1))
+        test2(ii+1)
