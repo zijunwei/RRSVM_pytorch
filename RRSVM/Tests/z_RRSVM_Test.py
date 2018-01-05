@@ -63,19 +63,20 @@ def test_forward(input, kernel_size=3, padding=0, stride=2, dilation=1):
     else:
         print "Passed. Ouput Pass Foward Test"
 
-    # Minh: Seems like a bug. This code does not test the indices
+    #FIXME Minh: Seems like a bug. This code does not test the indices
     # if not (np.absolute(numerical - analytical) <= (atol + rtol * np.absolute(numerical))).all():
-    # if not (numerical_indices == analytical_indices).all():
-    #     print "Failed. Indices Failed Foward Test"
-    # else:
-    #     print "Passed. Indices Pass Foward Test"
-    # test = gradcheck(lambda i, s: F(i, s), inputs=input, eps=1e-6, atol=1e-4)
-    # print "DONE"
-    input_np = input[0].data.cpu().numpy()
-    if not check_forward_indices(input_np, numerical_indices, analytical_indices, kernel_size, padding, stride, dilation):
+    if not (numerical_indices == analytical_indices).all():
         print "Failed. Indices Failed Foward Test"
     else:
         print "Passed. Indices Pass Foward Test"
+
+
+    # FIXME: Using Zwei's way
+    # input_np = input[0].data.cpu().numpy()
+    # if not check_forward_indices(input_np, numerical_indices, analytical_indices, kernel_size, padding, stride, dilation):
+    #     print "Failed. Indices Failed Foward Test"
+    # else:
+    #     print "Passed. Indices Pass Foward Test"
 
 def get_numerical_output(input, s, kernel_size=3, padding=0, stride=1, dilation=1):
 
@@ -192,8 +193,11 @@ def test2(case_id):
         feature_size = 10
         stride = 5
 
-    A = torch.randn(1, n_channel, feature_size, feature_size)
-    A[A < 0] = 0.0
+    # A = torch.randn(1, n_channel, feature_size, feature_size)
+    # A[A < 0] = 0.0
+    A = torch.randperm(1 * n_channel * feature_size * feature_size).float()
+    A = A.view(1, n_channel, feature_size, feature_size)
+
     input = (Variable(torch.FloatTensor(A), requires_grad=True),
              Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size ** 2)), requires_grad=True),)
     test_forward(input, kernel_size=kernel_size, padding=0, stride=stride, dilation=1)
