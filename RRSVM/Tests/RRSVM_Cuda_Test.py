@@ -6,7 +6,7 @@ import torch
 from RRSVM.Tests.MyGradCheck import gradcheck
 import numpy as np
 import sys
-
+from RRSVM.Tests.z_RRSVM_Test import check_forward_indices
 
 def test_gradient(input, kernel_size=3, padding=0, stride=1):
 
@@ -59,11 +59,18 @@ def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
     # relative_loss = (numerical - analytical) / (numerical + 1e-6)
     # print "Max Diff: {:.04f}".format((np.abs(relative_loss).max()))
 
-
-    if not (np.absolute(numerical_indices - analytical_indices) <= (atol + rtol * np.absolute(numerical_indices))).all():
-        print "Output Indices Error"
+    input_np = input[0].data.cpu().numpy()
+    if check_forward_indices(input_np, numerical_indices, analytical_indices, kernel_size, padding, stride, dilation):
+        print "Passed, Indices Pass Forward Test"
+        flag = True
+    else:
+        print "Failed, Indices Fail Foward Test"
         flag = False
     return flag
+    # if not (np.absolute(numerical_indices - analytical_indices) <= (atol + rtol * np.absolute(numerical_indices))).all():
+    #     print "Output Indices Error"
+    #     flag = False
+    # return flag
         # print "Indices Failed Foward Test"
     # else:
     #     print "Indices Pass Foward Test"
