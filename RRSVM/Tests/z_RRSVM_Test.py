@@ -20,12 +20,40 @@ def test_gradient(input, kernel_size=3, padding=0, stride=1):
     else:
         print("Failed. Gradient Check Failed!")
 
+#zwei: forward indices check may fail due to many entries of the same value occure in the receptive field. Now change
+# the forwared indices check to sort and compare the values.
+def check_forward_indices(input, numerical, analytical, kernel_size, padding, stride, dilation):
+    if padding >0 or dilation>1:
+        print("Foward indices check only supports padding=0 and dilation=1")
+    input_shape = input.shape
+    output_size_H =(input_shape[2] + 2 * padding - (dilation * (kernel_size - 1) + 1)) / stride + 1
+    output_size_W =(input_shape[3] + 2 * padding - (dilation * (kernel_size - 1) + 1)) / stride + 1
+    # Should be a list of asseration here, but I will go without it for now
+    for batch_idx in range(input_shape[0]):
+        for chl_idx in range(input_shape[1]):
 
-def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
+            input_slice = input[batch_idx, chl_idx]
+            for h_idx in range(output_size_H):
+                for w_idx in range(output_size_W):
+                    input_region = input_slice[h_idx*stride:h_idx*stride+kernel_size, w_idx*stride:w_idx*stride+kernel_size]
+                    input_array = input_region.flatten()
+                    s_analytical_indices = analytical[batch_idx, chl_idx, h_idx, w_idx]
+                    s_numberical_indices = numerical[batch_idx, chl_idx, h_idx, w_idx]
+                    s_analytical_arranges = input_array[s_analytical_indices]
+                    s_numberical_arranges = input_array[s_numberical_indices]
+                    if not (s_numberical_arranges == s_analytical_arranges).all():
+                        return False
+
+    return True
+
+
+
+
+def test_forward(input, kernel_size=3, padding=0, stride=2, dilation=1):
     F = RRSVM.RRSVM_F(kernel_size, padding, stride, dilation=dilation, return_indices=True)
     analytical, analytical_indices = F(*input)
-    analytical = analytical.data.numpy()
-    analytical_indices = analytical_indices.data.numpy()
+    analytical = analytical.data.cpu().numpy()
+    analytical_indices = analytical_indices.data.cpu().numpy()
     numerical, numerical_indices = get_numerical_output(*input, kernel_size=kernel_size, padding=padding, stride=stride, dilation=1)
 
     atol = 1e-5
@@ -37,13 +65,17 @@ def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
 
     # Minh: Seems like a bug. This code does not test the indices
     # if not (np.absolute(numerical - analytical) <= (atol + rtol * np.absolute(numerical))).all():
-    if not (numerical_indices == analytical_indices).all():
+    # if not (numerical_indices == analytical_indices).all():
+    #     print "Failed. Indices Failed Foward Test"
+    # else:
+    #     print "Passed. Indices Pass Foward Test"
+    # test = gradcheck(lambda i, s: F(i, s), inputs=input, eps=1e-6, atol=1e-4)
+    # print "DONE"
+    input_np = input[0].data.cpu().numpy()
+    if not check_forward_indices(input_np, numerical_indices, analytical_indices, kernel_size, padding, stride, dilation):
         print "Failed. Indices Failed Foward Test"
     else:
         print "Passed. Indices Pass Foward Test"
-    # test = gradcheck(lambda i, s: F(i, s), inputs=input, eps=1e-6, atol=1e-4)
-    # print "DONE"
-
 
 def get_numerical_output(input, s, kernel_size=3, padding=0, stride=1, dilation=1):
 
@@ -143,20 +175,28 @@ def test2(case_id):
         kernel_size = 2
         n_channel = 1
         feature_size = 2
+        stride = kernel_size
     elif case_id == 2:
         kernel_size = 2
         n_channel = 3
         feature_size = 7
+        stride = kernel_size
     elif case_id == 3:
         kernel_size = 5
         n_channel = 10
         feature_size = 14
+        stride = kernel_size
+    elif case_id == 4:
+        kernel_size = 7
+        n_channel = 50
+        feature_size = 10
+        stride = 5
 
     A = torch.randn(1, n_channel, feature_size, feature_size)
     A[A < 0] = 0.0
     input = (Variable(torch.FloatTensor(A), requires_grad=True),
              Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size ** 2)), requires_grad=True),)
-    test_forward(input, kernel_size=kernel_size, padding=0, stride=kernel_size, dilation=1)
+    test_forward(input, kernel_size=kernel_size, padding=0, stride=stride, dilation=1)
     test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)
 
 
@@ -164,7 +204,6 @@ if __name__ == '__main__':
     for ii in range(5):
         print("---- Test 1, Case {}".format(ii+1))
         test1(ii+1)
-
-    for ii in range(3):
+    for ii in range(4):
         print("---- Test 2, Case {}".format(ii+1))
         test2(ii+1)
