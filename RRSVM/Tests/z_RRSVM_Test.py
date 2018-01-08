@@ -65,18 +65,18 @@ def test_forward(input, kernel_size=3, padding=0, stride=2, dilation=1):
 
     #FIXME Minh: Seems like a bug. This code does not test the indices
     # if not (np.absolute(numerical - analytical) <= (atol + rtol * np.absolute(numerical))).all():
-    if not (numerical_indices == analytical_indices).all():
-        print "Failed. Indices Failed Foward Test"
-    else:
-        print "Passed. Indices Pass Foward Test"
-
-
-    # FIXME: Using Zwei's way
-    # input_np = input[0].data.cpu().numpy()
-    # if not check_forward_indices(input_np, numerical_indices, analytical_indices, kernel_size, padding, stride, dilation):
+    # if not (numerical_indices == analytical_indices).all():
     #     print "Failed. Indices Failed Foward Test"
     # else:
     #     print "Passed. Indices Pass Foward Test"
+
+
+    # FIXME: Using Zwei's way
+    input_np = input[0].data.cpu().numpy()
+    if not check_forward_indices(input_np, numerical_indices, analytical_indices, kernel_size, padding, stride, dilation):
+        print "Failed. Indices Failed Foward Test"
+    else:
+        print "Passed. Indices Pass Foward Test"
 
 def get_numerical_output(input, s, kernel_size=3, padding=0, stride=1, dilation=1):
 
@@ -172,22 +172,33 @@ def test1(case_id):
 
 # use random non-negative inputs
 def test2(case_id):
-    if case_id == 1:
+    if case_id == 0:
+        n_im = 2
+        kernel_size = 2
+        n_channel = 1
+        feature_size = 4
+        stride = kernel_size
+
+    elif case_id == 1:
+        n_im = 2
         kernel_size = 2
         n_channel = 1
         feature_size = 2
         stride = kernel_size
     elif case_id == 2:
+        n_im = 1
         kernel_size = 2
         n_channel = 3
         feature_size = 7
         stride = kernel_size
     elif case_id == 3:
+        n_im = 3
         kernel_size = 5
         n_channel = 10
         feature_size = 14
         stride = kernel_size
     elif case_id == 4:
+        n_im = 5
         kernel_size = 7
         n_channel = 50
         feature_size = 10
@@ -195,19 +206,77 @@ def test2(case_id):
 
     # A = torch.randn(1, n_channel, feature_size, feature_size)
     # A[A < 0] = 0.0
-    A = torch.randperm(1 * n_channel * feature_size * feature_size).float()
-    A = A.view(1, n_channel, feature_size, feature_size)
+    A = torch.randperm(n_im * n_channel * feature_size * feature_size).float()
+    A = A.view(n_im, n_channel, feature_size, feature_size)
+
+    input = (Variable(torch.FloatTensor(A), requires_grad=True),
+             Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size ** 2)), requires_grad=True),)
+    # test_forward(input, kernel_size=kernel_size, padding=0, stride=stride, dilation=1)
+    test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)
+
+# zwei: set up a new set of tests to test each situation specifically
+def test3(case_id):
+    # test if the sum_gradient is all correct
+    # if case_id == 0:
+    #     n_im = 1
+    #     kernel_size = 2
+    #     n_channel = 1
+    #     feature_size = 4
+    #     stride = kernel_size
+    #
+    # # test if the sum_gradient of the parameter is correct over different images
+    # elif case_id == 1:
+    #     n_im = 2
+    #     kernel_size = 2
+    #     n_channel = 1
+    #     feature_size = 4
+    #     stride = kernel_size
+    # test larger scale but at the same num_image
+    if case_id == 2:
+        n_im = 5
+        kernel_size = 2
+        n_channel = 1
+        feature_size = 2
+        stride = kernel_size
+    # test larger scale
+    elif case_id == 3:
+        n_im = 2
+        kernel_size = 2
+        n_channel = 3
+        feature_size = 4
+        stride = kernel_size
+    elif case_id == 4:
+        n_im = 3
+        kernel_size = 2
+        n_channel = 2
+        feature_size = 4
+        stride = kernel_size
+    # elif case_id == 5:
+    #     n_im = 10
+    #     kernel_size = 4
+    #     n_channel = 10
+    #     feature_size = 8
+    #     stride = kernel_size
+    else:
+        return
+
+
+    # A = torch.randn(1, n_channel, feature_size, feature_size)
+    # A[A < 0] = 0.0
+    A = torch.randperm(n_im * n_channel * feature_size * feature_size).float()*0.1
+    A = A.view(n_im, n_channel, feature_size, feature_size)
+
 
     input = (Variable(torch.FloatTensor(A), requires_grad=True),
              Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size ** 2)), requires_grad=True),)
     test_forward(input, kernel_size=kernel_size, padding=0, stride=stride, dilation=1)
-    test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)
+    test_gradient(input, kernel_size=kernel_size, padding=0, stride=stride)
 
 
 if __name__ == '__main__':
-    for ii in range(5):
-        print("---- Test 1, Case {}".format(ii+1))
-        test1(ii+1)
-    for ii in range(4):
-        print("---- Test 2, Case {}".format(ii+1))
-        test2(ii+1)
+    # for ii in range(5):
+    #     print("---- Test 1, Case {}".format(ii+1))
+    #     test1(ii+1)
+    for ii in range(6):
+        print("---- Test 3, Case {}".format(ii+1))
+        test3(ii)

@@ -157,12 +157,12 @@ if __name__ == '__main__':
     # when doing back propgation, the forward of the input will change the order, which will bring errors, but the forward of the s will not bring order change, so you will always see that the
     # the error is always the first elements
     for i in range(100):
-        kernel_size = 3
-        n_channel = 5
+        kernel_size = 2
+        n_channel = 10
         feature_size = 4
         padding = 0
         stride = 2
-        batch_size = 3
+        batch_size = 10
         torch.cuda.set_device(0)
 
 

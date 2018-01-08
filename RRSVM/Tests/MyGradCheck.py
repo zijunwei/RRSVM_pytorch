@@ -1,6 +1,8 @@
 import torch
 from torch.autograd import Variable
 import numpy as np
+from collections import Iterable
+
 
 def iter_gradients(x):
     if isinstance(x, Variable):
@@ -82,23 +84,61 @@ def get_numerical_jacobian(fn, input, target, eps=1e-3):
     return jacobian
 
 
+# def get_analytical_jacobian(input, output):
+#     jacobian = make_jacobian(input, output.numel())
+#     grad_output = output.data.clone().zero_()
+#     flat_grad_output = grad_output.view(-1)
+#
+#     for i in range(flat_grad_output.numel()):
+#         flat_grad_output.zero_()
+#         flat_grad_output[i] = 1
+#         zero_gradients(input)
+#         output.backward(grad_output, retain_graph=True)
+#         for jacobian_x, d_x in zip(jacobian, iter_gradients(input)):
+#             if d_x is None:
+#                 jacobian_x[:, i].zero_()
+#             else:
+#                 jacobian_x[:, i] = d_x.to_dense() if d_x.is_sparse else d_x
+#
+#     return jacobian
+def iter_variables(x):
+    if isinstance(x, Variable):
+        if x.requires_grad:
+            yield (x.grad.data, x.data) if x.grad is not None else (None, None)
+    elif isinstance(x, Iterable):
+        for elem in x:
+            for result in iter_variables(elem):
+                yield result
+
 def get_analytical_jacobian(input, output):
+    input = contiguous(input)
     jacobian = make_jacobian(input, output.numel())
+    jacobian_reentrant = make_jacobian(input, output.numel())
     grad_output = output.data.clone().zero_()
     flat_grad_output = grad_output.view(-1)
+    reentrant = True
+    correct_grad_sizes = True
 
     for i in range(flat_grad_output.numel()):
         flat_grad_output.zero_()
         flat_grad_output[i] = 1
-        zero_gradients(input)
-        output.backward(grad_output, retain_graph=True)
-        for jacobian_x, d_x in zip(jacobian, iter_gradients(input)):
-            if d_x is None:
-                jacobian_x[:, i].zero_()
-            else:
-                jacobian_x[:, i] = d_x.to_dense() if d_x.is_sparse else d_x
+        for jacobian_c in (jacobian, jacobian_reentrant):
+            zero_gradients(input)
+            output.backward(grad_output, create_graph=True)
+            for jacobian_x, (d_x, x) in zip(jacobian_c, iter_variables(input)):
+                if jacobian_x.numel() != 0:
+                    if d_x is None:
+                        jacobian_x[:, i].zero_()
+                    else:
+                        jacobian_x[:, i] = d_x.to_dense() if d_x.is_sparse else d_x
+                if d_x is not None and d_x.size() != x.size():
+                    correct_grad_sizes = False
 
-    return jacobian
+    for jacobian_x, jacobian_reentrant_x in zip(jacobian, jacobian_reentrant):
+        if jacobian_x.numel() != 0 and (jacobian_x - jacobian_reentrant_x).abs().max() != 0:
+            reentrant = False
+
+    return jacobian, reentrant, correct_grad_sizes
 
 
 def _as_tuple(x):
@@ -109,7 +149,10 @@ def _as_tuple(x):
     else:
         return x,
 
-
+# def fail_test(msg):
+#         if raise_exception:
+#             raise RuntimeError(msg)
+#         return False
 def gradcheck(func, inputs, eps=1e-6, atol=1e-5, rtol=1e-3):
     """Check gradients computed via small finite differences
        against analytical gradients
@@ -140,7 +183,7 @@ def gradcheck(func, inputs, eps=1e-6, atol=1e-5, rtol=1e-3):
 
         def fn(input):
             return _as_tuple(func(*input))[i].data
-        analytical = get_analytical_jacobian(_as_tuple(inputs), o)
+        analytical, reentrant, correct_grad_sizes = get_analytical_jacobian(_as_tuple(inputs), o)
         # print analytical
         numerical = get_numerical_jacobian(fn, inputs, inputs, eps)
         # print numerical
@@ -148,11 +191,26 @@ def gradcheck(func, inputs, eps=1e-6, atol=1e-5, rtol=1e-3):
             # relative_loss = (a - n) / (n + eps)
             # print relative_loss
             if not ((a - n).abs() <= (atol + rtol * n.abs())).all():
-                 print "{:d}th Input Grad is problematic, max diff:{:.06f}".format(k, (np.abs((a-n).numpy()).max()))
+                 max_diff = (np.abs((a-n).numpy()).max())
+                 max_diff_indices = np.where(np.abs((a-n).numpy()) == max_diff)
+
+                 print "{:d}th Input Grad is problematic, max diff:{:.06f}".format(k, max_diff)
+                 for index_x, index_y in zip(max_diff_indices[0], max_diff_indices[1]):
+                     print '[{:d}, {:d}]'.format(index_x, index_y)
+
+
                  Flag = False
             # else:
                 # print "{:d}th Input Grad is None problematic".format(k)
 
+        if not reentrant:
+            print ('not reentrant')
+
+        if not correct_grad_sizes:
+            print ('not correct_grad_sizes')
+
+    if False == Flag:
+        print "Backward Prop Error Found!"
     # check if the backward multiplies by grad_output
     zero_gradients(inputs)
     output = _as_tuple(func(*inputs))

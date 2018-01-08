@@ -269,7 +269,7 @@ void RRSVM_accGradParameters(THFloatTensor *input, THLongTensor * indices, THFlo
   indices_data = THLongTensor_data(indices);
   gradS_data = THFloatTensor_data(gradS);
 long elt;
-#pragma omp parallel for private(elt)
+//#pragma omp parallel for private(elt)
    for ( elt = 0; elt < batchSize; elt ++) {
     // Matrix mulitply per output:
     THFloatTensor *input_d_h_w = THFloatTensor_new();
