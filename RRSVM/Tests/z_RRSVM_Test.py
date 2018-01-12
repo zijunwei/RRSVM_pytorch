@@ -233,7 +233,7 @@ def test3(case_id):
     #     stride = kernel_size
     # test larger scale but at the same num_image
     if case_id == 2:
-        n_im = 5
+        n_im = 1
         kernel_size = 2
         n_channel = 1
         feature_size = 2
@@ -263,7 +263,7 @@ def test3(case_id):
 
     # A = torch.randn(1, n_channel, feature_size, feature_size)
     # A[A < 0] = 0.0
-    A = torch.randperm(n_im * n_channel * feature_size * feature_size).float()*0.1
+    A = torch.randperm(n_im * n_channel * feature_size * feature_size).float()*25
     A = A.view(n_im, n_channel, feature_size, feature_size)
 
 
@@ -277,6 +277,6 @@ if __name__ == '__main__':
     # for ii in range(5):
     #     print("---- Test 1, Case {}".format(ii+1))
     #     test1(ii+1)
-    for ii in range(6):
+    for ii in range(2,3):
         print("---- Test 3, Case {}".format(ii+1))
         test3(ii)
