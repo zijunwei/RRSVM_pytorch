@@ -7,7 +7,7 @@ from RRSVM.Tests.MyGradCheck import gradcheck
 import numpy as np
 import sys
 import torch.nn.functional as Functional
-
+from RRSVM.Tests.z_RRSVM_Test import check_forward_indices
 
 def test_gradient(input, kernel_size=3, padding=0, stride=1):
 
@@ -56,15 +56,23 @@ def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
     if not (np.absolute(numerical - analytical) <= (atol + rtol * np.absolute(numerical))).all():
         print "Update Output Error"
         flag = False
-    #
+    else:
+        print "Update Output passed"
     # relative_loss = (numerical - analytical) / (numerical + 1e-6)
     # print "Max Diff: {:.04f}".format((np.abs(relative_loss).max()))
 
-
-    if not (np.absolute(numerical_indices - analytical_indices) <= (atol + rtol * np.absolute(numerical_indices))).all():
-        print "Output Indices Error"
+    input_np = input[0].data.cpu().numpy()
+    if check_forward_indices(input_np, numerical_indices, analytical_indices, kernel_size, padding, stride, dilation):
+        print "Passed, Indices Pass Forward Test"
+        flag = True
+    else:
+        print "Failed, Indices Fail Foward Test"
         flag = False
     return flag
+    # if not (np.absolute(numerical_indices - analytical_indices) <= (atol + rtol * np.absolute(numerical_indices))).all():
+    #     print "Output Indices Error"
+    #     flag = False
+    # return flag
         # print "Indices Failed Foward Test"
     # else:
     #     print "Indices Pass Foward Test"
@@ -152,25 +160,25 @@ if __name__ == '__main__':
     # when doing back propgation, the forward of the input will change the order, which will bring errors, but the forward of the s will not bring order change, so you will always see that the
     # the error is always the first elements
     for i in range(100):
-        kernel_size = 3
-        n_channel = 64
-        feature_size = 5
+        kernel_size = 5
+        n_channel = 10
+        feature_size = 10
         padding = 0
-        stride = 2
-        batch_size = 3
+        stride = kernel_size
+        n_im = 1
         torch.cuda.set_device(0)
 
 
-        input = (Variable(torch.FloatTensor(torch.randn(batch_size, n_channel, feature_size, feature_size)).cuda(), requires_grad=True),
+        input = (Variable(torch.FloatTensor(torch.randn(n_im, n_channel, feature_size, feature_size)).cuda(), requires_grad=True),
                  Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size**2)).cuda(), requires_grad=True),)
         # print input
-        # t_forward = test_forward(input, kernel_size=kernel_size, padding=padding, stride=stride, dilation=1)
+        t_forward = test_forward(input, kernel_size=kernel_size, padding=padding, stride=stride, dilation=1)
         t_backward = test_gradient(input, kernel_size=kernel_size, padding=padding, stride=stride)
         back_flag = "Fail"
         forward_flag = 'Fail'
         if t_backward:
             back_flag = "Pass"
-        # if t_forward:
-        #     forward_flag = "Pass"
+        if t_forward:
+            forward_flag = "Pass"
 
         print "[{:03d} | {:03d}]\tFoward:{:s}; Backward:{:s}".format(i, 100, forward_flag, back_flag)
