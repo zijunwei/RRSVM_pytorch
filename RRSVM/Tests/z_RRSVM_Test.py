@@ -142,7 +142,7 @@ def test1(case_id):
         n_im = 1
         kernel_size = 2
         n_channel = 1
-        feature_size = 2
+        feature_size = 4
     elif case_id == 2:
         n_im = 2
         kernel_size = 2
@@ -164,8 +164,8 @@ def test1(case_id):
         n_channel = 3
         feature_size = 14
 
-    input = (Variable(torch.FloatTensor(torch.randn(n_im, n_channel, feature_size, feature_size)), requires_grad=True),
-             Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size ** 2)), requires_grad=True),)
+    input = (Variable(torch.DoubleTensor(torch.randn(n_im, n_channel, feature_size, feature_size).double()), requires_grad=True),
+             Variable(torch.DoubleTensor(torch.randn(n_channel, kernel_size ** 2).double()), requires_grad=True),)
     test_forward(input, kernel_size=kernel_size, padding=0, stride=kernel_size, dilation=1)
     test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)
 
@@ -233,10 +233,10 @@ def test3(case_id):
     #     stride = kernel_size
     # test larger scale but at the same num_image
     if case_id == 2:
-        n_im = 5
+        n_im = 1
         kernel_size = 2
         n_channel = 1
-        feature_size = 2
+        feature_size = 4
         stride = kernel_size
     # test larger scale
     elif case_id == 3:
@@ -263,12 +263,15 @@ def test3(case_id):
 
     # A = torch.randn(1, n_channel, feature_size, feature_size)
     # A[A < 0] = 0.0
-    A = torch.randperm(n_im * n_channel * feature_size * feature_size).float()*0.1
+    A = torch.randperm(n_im * n_channel * feature_size * feature_size).float()
+    # A = torch.ones(1)*1000
     A = A.view(n_im, n_channel, feature_size, feature_size)
 
 
     input = (Variable(torch.FloatTensor(A), requires_grad=True),
              Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size ** 2)), requires_grad=True),)
+
+
     test_forward(input, kernel_size=kernel_size, padding=0, stride=stride, dilation=1)
     test_gradient(input, kernel_size=kernel_size, padding=0, stride=stride)
 
@@ -280,3 +283,5 @@ if __name__ == '__main__':
     for ii in range(6):
         print("---- Test 3, Case {}".format(ii+1))
         test3(ii)
+
+

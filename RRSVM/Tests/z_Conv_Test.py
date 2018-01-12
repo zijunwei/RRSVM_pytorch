@@ -1,30 +1,23 @@
-import torchvision.models
+# 1. Check the gradient type of Convolutional NN
+# 2. See if the testgradient works fine
 import torch.nn.functional as Functional
-import torch.nn as nn
 from torch.autograd import Variable
 import torch
-# from torch.autograd import gradcheck
-from RRSVM.Tests.MyGradCheck import gradcheck
+from torch.autograd import gradcheck
 import numpy as np
 
-# TODO: May be you need the S to be 2D ...
-# TODO: Think about padding case with zero
 
+def test_gradient(input, padding=0, stride=1, dilation=1):
+    def conv_f(input, weight):
+        return Functional.conv2d(input=input, weight=weight, bias=None, padding=padding, stride=stride, dilation=dilation)
 
-def test_gradient(input, channels=3, kernel_size=3, padding=0, stride=1):
-
-    F = nn.Conv2d(in_channels=channels, out_channels=channels, kernel_size=kernel_size, padding=padding, stride=stride, dilation=1)
-
-    test = gradcheck(lambda i, s: F(i), inputs=input, eps=1e-3, atol=1e-3, rtol=1e-3)
+    test = gradcheck(lambda i, s: conv_f(i,s), inputs=input, eps=1e-3, atol=1e-3, rtol=1e-3)
     if test == True:
         print("Passed. Gradient Check Passed!")
     else:
         print("Failed. Gradient Check Failed!")
 
 
-
-
-# zwei: set up a new set of tests to test each situation specifically
 def test3(case_id):
     # test if the sum_gradient is all correct
     if case_id == 0:
@@ -57,26 +50,22 @@ def test3(case_id):
         stride = kernel_size
     elif case_id == 4:
         n_im = 5
-        kernel_size = 7
-        n_channel = 50
+        kernel_size = 5
+        n_channel = 20
         feature_size = 10
-        stride = 5
+        stride = kernel_size
 
-    # A = torch.randn(1, n_channel, feature_size, feature_size)
-    # A[A < 0] = 0.0
-    A = torch.randperm(n_im * n_channel * feature_size * feature_size).float()
+    # if you change the double back to float, it sometimes gives errors
+    A = torch.randperm(n_im * n_channel * feature_size * feature_size).double()
     A = A.view(n_im, n_channel, feature_size, feature_size)
 
-    input = (Variable(torch.FloatTensor(A), requires_grad=True),
-             Variable(torch.FloatTensor(torch.randn(n_channel, n_channel, kernel_size, kernel_size)), requires_grad=True))
-    # test_forward(input, kernel_size=kernel_size, padding=0, stride=stride, dilation=1)
-    test_gradient(input, kernel_size=kernel_size, padding=0, stride=kernel_size)
+    input = (Variable(torch.DoubleTensor(A), requires_grad=True),
+             Variable(torch.DoubleTensor(torch.randn(n_channel, n_channel, kernel_size, kernel_size).double()), requires_grad=True))
+    test_gradient(input, padding=0, stride=stride)
 
 
 if __name__ == '__main__':
-    # for ii in range(5):
-    #     print("---- Test 1, Case {}".format(ii+1))
-    #     test1(ii+1)
+
     for ii in range(5):
         print("---- Test 3, Case {}".format(ii+1))
         test3(ii)
