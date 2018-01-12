@@ -88,7 +88,7 @@ def progress_bar(k,n, prefix_message='Progress', post_message='', start_time=Non
 
     str_format = "{:s} {{:{:d}d}}/{:d} ({{:6.2f}}%), {:s}".format(prefix_message, n_digit, n, post_message)
     if start_time:
-        str_format += " elapse time: {:7.1f}s\n".format(time.time() - start_time)
+        str_format += " elapse time: {:7.1f}s".format(time.time() - start_time)
 
     pre_str = '\r'
     post_str = ''
@@ -125,8 +125,8 @@ class Net(nn.Module):
     def __init__(self, pool_method):
         ksize = 2
         psize = (ksize-1)/2
-        d1 = 1
-        d2 = 1
+        d1 = 10
+        d2 = 10
         d3 = 50
         self.d2b = 16*d2
 
@@ -157,6 +157,67 @@ class Net(nn.Module):
         x = self.conv2(x)
         x = self.conv2_drop(x)
         x = self.pool2(x)
+        x = F.relu(x)
+
+        x = x.view(-1, self.d2b)
+        x = F.relu(self.fc1(x))
+        x = F.dropout(x, training=self.training)
+        x = self.fc2(x)
+        # return x
+        return F.log_softmax(x)
+
+
+class Net2(nn.Module):
+    def __init__(self, pool_method):
+        ksize = 2
+        psize = (ksize-1)/2
+        d1 = 5
+        d2 = 5
+        d3 = 50
+        self.d2b = 16*d2*2
+
+        gksize = 5 # global pooling or bigger receptive field
+        gpsize = (gksize-1)/2
+
+        super(Net2, self).__init__()
+        self.conv1 = nn.Conv2d(1, d1, kernel_size=5)
+        self.conv2 = nn.Conv2d(2*d1, d2, kernel_size=5)
+        if pool_method == 'max':
+            self.pool1 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
+            self.pool2 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
+        elif pool_method == 'RRSVM':
+            self.pool1 = RRSVM_Module(in_channels=d1, init='eps_max', kernel_size=ksize, stride=2, padding=psize)
+            self.pool2 = RRSVM_Module(in_channels=d2, init='eps_max', kernel_size=ksize, stride=2, padding=psize)
+        elif pool_method == 'SoftRRSVM':
+            self.pool1 = SoftRRSVM_Module(in_channels=d1, kernel_size=ksize, stride=2, padding=psize)
+            self.pool2 = SoftRRSVM_Module(in_channels=d2, kernel_size=ksize, stride=2, padding=psize)
+
+        self.gpool1 = RRSVM_Module(in_channels=d1, init='eps_max', kernel_size=gksize, stride=2, padding=gpsize)
+        self.gpool2 = RRSVM_Module(in_channels=d2, init='eps_max', kernel_size=gksize, stride=2, padding=gpsize)
+
+
+        self.conv2_drop = nn.Dropout2d()
+        self.fc1 = nn.Linear(self.d2b, d3)
+        self.fc2 = nn.Linear(d3, 10)
+
+    def forward(self, x):
+        # x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        x = self.conv1(x)
+        x1 = self.pool1(x)
+        x2 = self.gpool1(x)
+        #print(x1.size())
+        #print(x2.size())
+        x = torch.cat((x1, x2), 1)
+
+        x = F.relu(x)
+
+        # x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
+        x = self.conv2(x)
+        x = self.conv2_drop(x)
+
+        x1 = self.pool2(x)
+        x2 = self.gpool2(x)
+        x = torch.cat((x1, x2), 1)
         x = F.relu(x)
 
         x = x.view(-1, self.d2b)
