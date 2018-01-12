@@ -227,7 +227,7 @@ class Net2(nn.Module):
         # return x
         return F.log_softmax(x)
 
-model = Net(pool_method=args.pool_method)
+model = Net2(pool_method=args.pool_method)
 if args.cuda:
     model.cuda()
 print("Number of Params:\t{:d}".format(sum([p.data.nelement() for p in model.parameters()])))
