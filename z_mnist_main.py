@@ -171,7 +171,25 @@ if args.cuda:
     model.cuda()
 print("Number of Params:\t{:d}".format(sum([p.data.nelement() for p in model.parameters()])))
 
-optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+# optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+
+# # check what is p, but only tensor, not variables:
+# for name, param in model.state_dict().iteritems():
+#     if 'pool' in name:
+#         print(name)
+#         print(param)
+
+# for name_param in model.state_dict():
+#     print(name_param)
+#
+# for param in model.named_parameters():
+#     print(param)
+
+optimizer = optim.SGD([
+                {'params': [param[1] for param in model.named_parameters() if 'pool' not in param[0]]},
+                {'params': [param[1] for param in model.named_parameters() if 'pool' in param[0]], 'lr': 0.1*args.lr}
+            ], lr=args.lr, momentum=args.momentum)
+
 loss_fn = torch.nn.CrossEntropyLoss()
 
 

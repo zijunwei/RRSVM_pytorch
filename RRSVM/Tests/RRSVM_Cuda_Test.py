@@ -67,30 +67,6 @@ def test_forward(input, kernel_size=3, padding=1, stride=2, dilation=1):
         print "Failed, Indices Fail Foward Test"
         flag = False
     return flag
-    # if not (np.absolute(numerical_indices - analytical_indices) <= (atol + rtol * np.absolute(numerical_indices))).all():
-    #     print "Output Indices Error"
-    #     flag = False
-    # return flag
-        # print "Indices Failed Foward Test"
-    # else:
-    #     print "Indices Pass Foward Test"
-    # test = gradcheck(lambda i, s: F(i, s), inputs=input, eps=1e-6, atol=1e-4)
-    # print "DONE"
-    # if not (np.absolute(numerical - analytical) <= (atol + rtol * np.absolute(numerical))).all():
-    #     print "Output Failed Foward Test"
-    # else:
-    #     print "Ouput Pass Foward Test"
-    #
-    # relative_loss = (numerical - analytical) / (numerical + 1e-6)
-    # print "Max Diff: {:.04f}".format((np.abs(relative_loss).max()))
-    #
-    #
-    # if not (np.absolute(numerical_indices - analytical_indices) <= (atol + rtol * np.absolute(numerical_indices))).all():
-    #     print "Indices Failed Foward Test"
-    # else:
-    #     print "Indices Pass Foward Test"
-    # # test = gradcheck(lambda i, s: F(i, s), inputs=input, eps=1e-6, atol=1e-4)
-    # # print "DONE"
 
 
 def get_numerical_output(input, s, kernel_size=3, padding=0, stride=1, dilation=1):
@@ -158,13 +134,12 @@ if __name__ == '__main__':
     # the error is always the first elements
     for i in range(100):
         kernel_size = 2
-        n_channel = 10
+        n_channel = 1
         feature_size = 4
         padding = 0
         stride = 2
-        batch_size = 10
+        batch_size = 1
         torch.cuda.set_device(0)
-
 
         input = (Variable(torch.FloatTensor(torch.randn(batch_size, n_channel, feature_size, feature_size)).cuda(), requires_grad=True),
                  Variable(torch.FloatTensor(torch.randn(n_channel, kernel_size**2)).cuda(), requires_grad=True),)

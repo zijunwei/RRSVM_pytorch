@@ -301,7 +301,7 @@ void RRSVM_accGradParameters(THFloatTensor *input, THFloatTensor *softmax_s, THL
     long elt;
     int chl;
 
-#pragma omp parallel for private(elt)
+//#pragma omp parallel for private(elt)
     for ( elt = 0; elt < batchSize; elt ++) {
         // Matrix mulitply per output:
         THFloatTensor *input_d_h_w = THFloatTensor_new();
@@ -339,7 +339,7 @@ void RRSVM_accGradParameters(THFloatTensor *input, THFloatTensor *softmax_s, THL
 
     }
 
-#pragma omp parallel for private(chl)
+//#pragma omp parallel for private(chl)
     for (chl = 0; chl < nInputPlane; chl ++){
         float sum = 0;
         int d;
