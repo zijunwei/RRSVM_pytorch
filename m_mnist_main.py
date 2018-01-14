@@ -54,7 +54,7 @@ dataset_root = dir_utils.get_dir(os.path.join(os.path.expanduser('~'), 'datasets
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
 
-train_size = 6000  # use a subset of training data
+train_size = 2000  # use a subset of training data
 train_set = datasets.MNIST(dataset_root, train=True, download=True,
                    transform=transforms.Compose([
                        transforms.ToTensor(),
@@ -126,7 +126,7 @@ class Net(nn.Module):
         ksize = 2
         psize = (ksize-1)/2
         d1 = 10
-        d2 = 10
+        d2 = 20
         d3 = 50
         self.d2b = 16*d2
 
@@ -171,17 +171,17 @@ class Net2(nn.Module):
     def __init__(self, pool_method):
         ksize = 2
         psize = (ksize-1)/2
-        d1 = 5
-        d2 = 5
+        d1 = 10
+        d2 = 20
         d3 = 50
-        self.d2b = 16*d2*2
+        self.d2b = 16*d2
 
-        gksize = 5 # global pooling or bigger receptive field
+        gksize = 7 # global pooling or bigger receptive field
         gpsize = (gksize-1)/2
 
         super(Net2, self).__init__()
         self.conv1 = nn.Conv2d(1, d1, kernel_size=5)
-        self.conv2 = nn.Conv2d(2*d1, d2, kernel_size=5)
+        self.conv2 = nn.Conv2d(d1, d2, kernel_size=5)
         if pool_method == 'max':
             self.pool1 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
             self.pool2 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
@@ -191,23 +191,28 @@ class Net2(nn.Module):
         elif pool_method == 'SoftRRSVM':
             self.pool1 = SoftRRSVM_Module(in_channels=d1, kernel_size=ksize, stride=2, padding=psize)
             self.pool2 = SoftRRSVM_Module(in_channels=d2, kernel_size=ksize, stride=2, padding=psize)
-
-        self.gpool1 = RRSVM_Module(in_channels=d1, init='eps_max', kernel_size=gksize, stride=2, padding=gpsize)
-        self.gpool2 = RRSVM_Module(in_channels=d2, init='eps_max', kernel_size=gksize, stride=2, padding=gpsize)
+        elif pool_method == 'combine':
+            self.pool1 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
+            self.pool2 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
+            self.gpool1 = RRSVM_Module(in_channels=d1, init='eps_max', kernel_size=gksize, stride=2, padding=gpsize)
+            self.gpool2 = RRSVM_Module(in_channels=d2, init='eps_max', kernel_size=gksize, stride=2, padding=gpsize)
 
 
         self.conv2_drop = nn.Dropout2d()
         self.fc1 = nn.Linear(self.d2b, d3)
         self.fc2 = nn.Linear(d3, 10)
+        self.pool_method = pool_method
 
     def forward(self, x):
         # x = F.relu(F.max_pool2d(self.conv1(x), 2))
         x = self.conv1(x)
-        x1 = self.pool1(x)
-        x2 = self.gpool1(x)
-        #print(x1.size())
-        #print(x2.size())
-        x = torch.cat((x1, x2), 1)
+        if self.pool_method == 'combine':
+            x1 = self.pool1(x)
+            x2 = self.gpool1(x)
+            # x = torch.cat((x1, x2), 1)
+            x = x1 + x2
+        else:
+            x = self.pool1(x)
 
         x = F.relu(x)
 
@@ -215,9 +220,14 @@ class Net2(nn.Module):
         x = self.conv2(x)
         x = self.conv2_drop(x)
 
-        x1 = self.pool2(x)
-        x2 = self.gpool2(x)
-        x = torch.cat((x1, x2), 1)
+        if self.pool_method == 'combine':
+            x1 = self.pool2(x)
+            x2 = self.gpool2(x)
+            # x = torch.cat((x1, x2), 1)
+            x = x1 + x2
+        else:
+            x = self.pool1(x)
+
         x = F.relu(x)
 
         x = x.view(-1, self.d2b)
