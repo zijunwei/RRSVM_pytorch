@@ -7,7 +7,7 @@ import argparse
 import numpy as np
 
 def get_minst_datasets(args, train_portion=1.0):
-    kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+    kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {'num_workers': 1}
 
     dataset_root = dir_utils.get_dir(os.path.join(os.path.expanduser('~'), 'datasets', 'RRSVM_datasets'))
 
@@ -19,7 +19,7 @@ def get_minst_datasets(args, train_portion=1.0):
                        ]))
 
     if train_portion < 1.0:
-
+        np.random.seed(args.seed or 0)
         n_samples = len(train_set)
         categories_labels = list(set(train_set.train_labels.numpy()))
         n_categories = len(categories_labels)
