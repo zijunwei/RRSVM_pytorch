@@ -5,12 +5,13 @@ Adapted from Zijun's Mnist_main.py
 By: Minh Hoai Nguyen (minhhoai@cs.stonybrook.edu)
 Created: 29-Dec-2017
 Last modified: 29-Dec-2017
-
-This is the original file adapted from Minh
-Will base on this to do more experiments
 """
 
 from __future__ import print_function
+import os, sys
+project_root = os.path.join(os.path.expanduser('~'), 'Dev/RRSVM_pytorch')
+sys.path.append(project_root)
+
 import argparse
 import torch
 import torch.nn as nn
@@ -20,14 +21,15 @@ from torchvision import datasets, transforms
 from torch.autograd import Variable
 from RRSVM.SoftMax_RRSVM import RRSVM_Module as SoftRRSVM_Module  # SoftMax RRSVM
 from RRSVM.RRSVM import RRSVM_Module as RRSVM_Module # RRSVM
-from py_utils import dir_utils
-import os
+from pt_utils import cuda_model
+from py_utils import m_progressbar
 from torch.utils.data.sampler import SubsetRandomSampler
-import time, sys
+import datasets.Mnist
+import time
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-parser.add_argument('--batch-size', type=int, default=64, metavar='N',
+parser.add_argument('--train-batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 64)')
 parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
                     help='input batch size for testing (default: 1000)')
@@ -35,103 +37,43 @@ parser.add_argument('--epochs', type=int, default=50, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='learning rate (default: 0.01)')
+
+parser.add_argument("--gpu_id", default=0, type=str)
+parser.add_argument('--multiGpu', '-m', action='store_true', help='positivity constraint')
+
 parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                     help='SGD momentum (default: 0.5)')
-parser.add_argument('--no-cuda', action='store_true', default=False,
-                    help='disables CUDA training')
+
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
-parser.add_argument('--pool-method', default='RRSVM',
-                    help='pooling method (max|RRSVM|SoftRRSVM) (default: RRSVM)')
+parser.add_argument('--pool-method', default='max',
+                    help='pooling method (max|RRSVM|SoftRRSVM|R+M | A+M | M+M ) (default: RRSVM)')
 
 args = parser.parse_args()
-args.cuda = not args.no_cuda and torch.cuda.is_available()
+args.cuda = torch.cuda.is_available() and (args.gpu_id is not None or args.multiGPU)
+
 
 torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
-dataset_root = dir_utils.get_dir(os.path.join(os.path.expanduser('~'), 'datasets', 'RRSVM_datasets'))
-kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
+train_loader, test_loader =datasets.Mnist.get_minst_datasets(args, train_portion=0.1) # using 10% of all data
 
-train_size = 6000  # use a subset of training data
-train_set = datasets.MNIST(dataset_root, train=True, download=True,
-                   transform=transforms.Compose([
-                       transforms.ToTensor(),
-                       transforms.Normalize((0.1307,), (0.3081,))
-                   ]))
-indices = torch.randperm(len(train_set))
-train_indices = indices[:][:train_size or None]
-train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size,
-                                           sampler=SubsetRandomSampler(train_indices), **kwargs)
-
-
-test_loader = torch.utils.data.DataLoader(
-    datasets.MNIST(dataset_root, train=False, transform=transforms.Compose([
-                       transforms.ToTensor(),
-                       transforms.Normalize((0.1307,), (0.3081,))
-                   ])),
-    batch_size=args.test_batch_size, shuffle=False, **kwargs)
-
-
-
-def progress_bar(k,n, prefix_message='Progress', post_message='', start_time=None):
-    """
-    Show the progress bar
-    k: current progress
-    n: total
-
-    Created: 23-Mar-2017, Last modified: 23-Mar-2017
-    """
-
-    n_digit = len("{:d}".format(n))
-
-    str_format = "{:s} {{:{:d}d}}/{:d} ({{:6.2f}}%), {:s}".format(prefix_message, n_digit, n, post_message)
-    if start_time:
-        str_format += " elapse time: {:7.1f}s".format(time.time() - start_time)
-
-    pre_str = '\r'
-    post_str = ''
-    if k == 1:
-        pre_str = '\n'
-    elif k == n:
-        post_str = '\n'
-
-    _ = sys.stdout.write(pre_str + str_format.format(k, 100 * k / n) + post_str)
-    # sys.stdout.flush()
-
-
-# class MaxPoolNet(nn.Module):
-#     def __init__(self):
-#         super(MaxPoolNet, self).__init__()
-#         self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
-#         self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
-#         self.conv2_drop = nn.Dropout2d()
-#         self.fc1 = nn.Linear(320, 50)
-#         self.fc2 = nn.Linear(50, 10)
-#
-#     def forward(self, x):
-#         ksize = 2
-#         psize = (ksize-1)/2
-#         x = F.relu(F.max_pool2d(self.conv1(x), kernel_size=ksize, stride=2, padding=psize))
-#         x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), kernel_size=ksize, stride=2,padding=psize))
-#         x = x.view(-1, 320)
-#         x = F.relu(self.fc1(x))
-#         x = F.dropout(x, training=self.training)
-#         x = self.fc2(x)
-#         return F.log_softmax(x)
 
 class Net(nn.Module):
     def __init__(self, pool_method):
         ksize = 2
         psize = (ksize-1)/2
         d1 = 10
-        d2 = 10
+        d2 = 20
         d3 = 50
         self.d2b = 16*d2
+
+        gksize = 7 # global pooling or bigger receptive field
+        gpsize = (gksize-1)/2
 
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(1, d1, kernel_size=5)
@@ -145,72 +87,42 @@ class Net(nn.Module):
         elif pool_method == 'SoftRRSVM':
             self.pool1 = SoftRRSVM_Module(in_channels=d1, kernel_size=ksize, stride=2, padding=psize)
             self.pool2 = SoftRRSVM_Module(in_channels=d2, kernel_size=ksize, stride=2, padding=psize)
-
-        self.conv2_drop = nn.Dropout2d()
-        self.fc1 = nn.Linear(self.d2b, d3)
-        self.fc2 = nn.Linear(d3, 10)
-
-    def forward(self, x):
-        # x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        x = self.conv1(x)
-        x = self.pool1(x)
-        x = F.relu(x)
-
-        # x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-        x = self.conv2(x)
-        x = self.conv2_drop(x)
-        x = self.pool2(x)
-        x = F.relu(x)
-
-        x = x.view(-1, self.d2b)
-        x = F.relu(self.fc1(x))
-        x = F.dropout(x, training=self.training)
-        x = self.fc2(x)
-        # return x
-        return F.log_softmax(x)
-
-
-class Net2(nn.Module):
-    def __init__(self, pool_method):
-        ksize = 2
-        psize = (ksize-1)/2
-        d1 = 5
-        d2 = 5
-        d3 = 50
-        self.d2b = 16*d2*2
-
-        gksize = 5 # global pooling or bigger receptive field
-        gpsize = (gksize-1)/2
-
-        super(Net2, self).__init__()
-        self.conv1 = nn.Conv2d(1, d1, kernel_size=5)
-        self.conv2 = nn.Conv2d(2*d1, d2, kernel_size=5)
-        if pool_method == 'max':
+        elif pool_method == 'R+M':
             self.pool1 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
             self.pool2 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
-        elif pool_method == 'RRSVM':
-            self.pool1 = RRSVM_Module(in_channels=d1, init='eps_max', kernel_size=ksize, stride=2, padding=psize)
-            self.pool2 = RRSVM_Module(in_channels=d2, init='eps_max', kernel_size=ksize, stride=2, padding=psize)
-        elif pool_method == 'SoftRRSVM':
-            self.pool1 = SoftRRSVM_Module(in_channels=d1, kernel_size=ksize, stride=2, padding=psize)
-            self.pool2 = SoftRRSVM_Module(in_channels=d2, kernel_size=ksize, stride=2, padding=psize)
-
-        self.gpool1 = RRSVM_Module(in_channels=d1, init='eps_max', kernel_size=gksize, stride=2, padding=gpsize)
-        self.gpool2 = RRSVM_Module(in_channels=d2, init='eps_max', kernel_size=gksize, stride=2, padding=gpsize)
-
+            self.gpool1 = RRSVM_Module(in_channels=d1, init='eps_max', kernel_size=gksize, stride=2, padding=gpsize)
+            self.gpool2 = RRSVM_Module(in_channels=d2, init='eps_max', kernel_size=gksize, stride=2, padding=gpsize)
+        elif pool_method == 'A+M':
+            self.pool1 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
+            self.pool2 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
+            self.gpool1 = torch.nn.AvgPool2d(kernel_size=gksize, stride=2, padding=gpsize)
+            self.gpool2 = torch.nn.AvgPool2d(kernel_size=gksize, stride=2, padding=gpsize)
+        elif pool_method == 'M+M':
+            self.pool1 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
+            self.pool2 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
+            self.gpool1 = torch.nn.MaxPool2d(kernel_size=gksize, stride=2, padding=gpsize)
+            self.gpool2 = torch.nn.MaxPool2d(kernel_size=gksize, stride=2, padding=gpsize)
+        elif pool_method == 'GR+M':
+            self.pool1 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
+            self.pool2 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
+            self.gpool1 = RRSVM_Module(in_channels=d1, init='eps_max', kernel_size=24, stride=24, padding=0)
+            self.gpool2 = RRSVM_Module(in_channels=d2, init='eps_max', kernel_size=8, stride=8, padding=0)
 
         self.conv2_drop = nn.Dropout2d()
         self.fc1 = nn.Linear(self.d2b, d3)
         self.fc2 = nn.Linear(d3, 10)
+        self.pool_method = pool_method
 
     def forward(self, x):
         # x = F.relu(F.max_pool2d(self.conv1(x), 2))
         x = self.conv1(x)
-        x1 = self.pool1(x)
-        x2 = self.gpool1(x)
-        #print(x1.size())
-        #print(x2.size())
-        x = torch.cat((x1, x2), 1)
+        if self.pool_method in {'R+M', 'A+M', "M+M", 'GR+M'}:
+            x1 = self.pool1(x)
+            x2 = self.gpool1(x)
+            # x = torch.cat((x1, x2), 1)
+            x = x1 + x2
+        else:
+            x = self.pool1(x)
 
         x = F.relu(x)
 
@@ -218,9 +130,14 @@ class Net2(nn.Module):
         x = self.conv2(x)
         x = self.conv2_drop(x)
 
-        x1 = self.pool2(x)
-        x2 = self.gpool2(x)
-        x = torch.cat((x1, x2), 1)
+        if self.pool_method in {'R+M', 'A+M', "M+M", 'GR+M'}:
+            x1 = self.pool2(x)
+            x2 = self.gpool2(x)
+            # x = torch.cat((x1, x2), 1)
+            x = x1 + x2
+        else:
+            x = self.pool1(x)
+
         x = F.relu(x)
 
         x = x.view(-1, self.d2b)
@@ -230,13 +147,14 @@ class Net2(nn.Module):
         # return x
         return F.log_softmax(x)
 
-model = Net2(pool_method=args.pool_method)
-if args.cuda:
-    model.cuda()
-print("Number of Params:\t{:d}".format(sum([p.data.nelement() for p in model.parameters()])))
+model = Net(pool_method=args.pool_method)
 
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
 loss_fn = torch.nn.CrossEntropyLoss()
+if args.cuda:
+    model = cuda_model.convertModel2Cuda(model, args)
+    loss_fn = loss_fn.cuda()
+print("Number of Params:\t{:d}".format(sum([p.data.nelement() for p in model.parameters()])))
 
 
 def train():
@@ -256,7 +174,7 @@ def train():
 
         n_train_exs += len(data)
         total_loss += len(data) * loss.data[0]
-        progress_bar(n_train_exs, len(train_loader.sampler), start_time=start_time,
+        m_progressbar.progress_bar(n_train_exs, len(train_loader.sampler), start_time=start_time,
                         prefix_message='Training progress',
                         post_message='Ave loss {:.6f}'.format(total_loss / n_train_exs))
 
