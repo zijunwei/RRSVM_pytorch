@@ -57,5 +57,6 @@ if __name__ == '__main__':
     args.cuda = False
     args.train_batch_size = 20
     args.test_batch_size = 20
+    args.seed = 0
     train_loader, test_loader = get_minst_datasets(args, train_portion=0.1)
     print"DEBUG"
