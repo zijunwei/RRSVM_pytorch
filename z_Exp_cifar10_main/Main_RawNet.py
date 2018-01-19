@@ -7,6 +7,7 @@ Created: 29-Dec-2017
 Last modified: 29-Dec-2017
 """
 
+
 from __future__ import print_function
 import os, sys
 project_root = os.path.join(os.path.expanduser('~'), 'Dev/RRSVM_pytorch')
@@ -17,22 +18,22 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torchvision import datasets, transforms
+import datasets.Cifar10
+from torchvision import transforms
 from torch.autograd import Variable
 from RRSVM.SoftMax_RRSVM import RRSVM_Module as SoftRRSVM_Module  # SoftMax RRSVM
 from RRSVM.RRSVM import RRSVM_Module as RRSVM_Module # RRSVM
 from pt_utils import cuda_model
 from py_utils import m_progressbar
 from torch.utils.data.sampler import SubsetRandomSampler
-import datasets.Mnist
 import time
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
 parser.add_argument('--train-batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 64)')
-parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
-                    help='input batch size for testing (default: 1000)')
+parser.add_argument('--test-batch-size', type=int, default=64, metavar='N',
+                    help='input batch size for testing (default: 64)')
 parser.add_argument('--epochs', type=int, default=50, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
@@ -41,14 +42,14 @@ parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
 parser.add_argument("--gpu_id", default=0, type=str)
 parser.add_argument('--multiGpu', '-m', action='store_true', help='positivity constraint')
 
-parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
-                    help='SGD momentum (default: 0.5)')
+parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
+                    help='SGD momentum (default: 0.9)')
 
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
-parser.add_argument('--pool-method', default='max',
+parser.add_argument('--pool-method', default='R+M',
                     help='pooling method (max|RRSVM|SoftRRSVM|R+M | A+M | M+M ) (default: RRSVM)')
 
 args = parser.parse_args()
@@ -60,7 +61,7 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 
-train_loader, test_loader =datasets.Mnist.get_minst_datasets(args, train_portion=0.1) # using 10% of all data
+train_loader, test_loader =datasets.Cifar10.get_cifar10_datasets(args, train_portion=0.1) # using 10% of all data
 
 
 class Net(nn.Module):
@@ -70,13 +71,13 @@ class Net(nn.Module):
         d1 = 10
         d2 = 20
         d3 = 50
-        self.d2b = 16*d2
+        self.d2b = 25*d2
 
         gksize = 7 # global pooling or bigger receptive field
         gpsize = (gksize-1)/2
 
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, d1, kernel_size=5)
+        self.conv1 = nn.Conv2d(3, d1, kernel_size=5)
         self.conv2 = nn.Conv2d(d1, d2, kernel_size=5)
         if pool_method == 'max':
             self.pool1 = torch.nn.MaxPool2d(kernel_size=ksize, stride=2, padding=psize)
@@ -177,7 +178,7 @@ def train():
         data, target = Variable(data), Variable(target)
         optimizer.zero_grad()
         output = model(data)
-        loss = F.nll_loss(output, target)
+        loss = loss_fn(output, target)
         loss.backward()
         optimizer.step()
 
@@ -198,7 +199,7 @@ def test(data_loader):
             data, target = data.cuda(), target.cuda()
         data, target = Variable(data, volatile=True), Variable(target)
         output = model(data)
-        loss = F.nll_loss(output, target)
+        loss = loss_fn(output, target)
         test_loss += len(data) * loss.data[0]
         pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
         correct += pred.eq(target.data.view_as(pred)).cpu().sum()
