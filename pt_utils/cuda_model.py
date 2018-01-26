@@ -6,11 +6,11 @@ def ifUseCuda(gpu_id, multiGPU):
     return torch.cuda.is_available() and (gpu_id is not None or multiGPU)
 
 
-def convertModel2Cuda(model, args):
-    use_cuda = torch.cuda.is_available() and (args.gpu_id is not None or args.multiGPU)
+def convertModel2Cuda(model, gpu_id, multiGpu):
+    use_cuda = torch.cuda.is_available() and (gpu_id is not None or multiGpu)
     if use_cuda:
-        if args.multiGpu:
-            if args.gpu_id is None:  # using all the GPUs
+        if multiGpu:
+            if gpu_id is None:  # using all the GPUs
                 device_count = torch.cuda.device_count()
                 print("Using ALL {:d} GPUs".format(device_count))
                 model = nn.DataParallel(model, device_ids=[i for i in range(device_count)]).cuda()
@@ -21,9 +21,13 @@ def convertModel2Cuda(model, args):
 
 
         else:
-            torch.cuda.set_device(int(args.gpu_id))
+            torch.cuda.set_device(int(gpu_id))
             model.cuda()
 
         cudnn.benchmark = True
 
-    return  model
+    return model
+
+
+def convertModel2Cuda_args(model, args):
+    return convertModel2Cuda(model, args.gpu_id, args.multiGpu)
