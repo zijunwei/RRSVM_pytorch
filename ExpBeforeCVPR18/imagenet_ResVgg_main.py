@@ -52,10 +52,10 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--verbose', '-v', dest='verbose', action='store_true', help='verbose mode, if not, saved in log.txt')
 
-best_prec1 = 0
+best_mAP = 0
 
 def main():
-    global args, best_prec1
+    global args, best_mAP
     args = parser.parse_args()
     identifier = 'ResVgg'
     if args.finetune:

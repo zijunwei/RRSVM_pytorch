@@ -52,10 +52,10 @@ parser.add_argument('--print-freq', default=10, type=int,
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 
-best_prec1 = 0
+best_mAP = 0
 
 def main():
-    global args, best_prec1
+    global args, best_mAP
     args = parser.parse_args()
 
     if args.finetune:

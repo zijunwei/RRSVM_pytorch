@@ -68,18 +68,18 @@ parser.add_argument('--half', dest='half', action='store_true',
                     help='use half-precision(16-bit) ')
 parser.add_argument('--save-dir', dest='save_dir',
                     help='The directory used to save the trained models',
-                    default='checkpoint', type=str)
+                    default='checkpoint2', type=str)
 parser.add_argument('--save-every', dest='save_every',
                     help='Saves checkpoints at every specified number of epochs',
                     type=int, default=5)
 
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
-best_prec1 = 0
+best_mAP = 0
 
 
 def main():
-    global args, best_prec1
+    global args, best_mAP
     args = parser.parse_args()
     useCuda =  torch.cuda.is_available() and (args.gpu_id is not None or args.multiGPU)
     torch.manual_seed(args.seed)
@@ -91,7 +91,7 @@ def main():
         os.makedirs(args.save_dir)
 
     # model = torch.nn.DataParallel(resnet.__dict__[args.arch]())
-    model = resnet.resnet20(useRRSVM=True)
+    model = resnet.resnet20(useRRSVM=False)
 
     # optionally resume from a checkpoint
     if args.resume:
@@ -146,7 +146,9 @@ def main():
 
     args.start_epoch = 0
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
-                                                        milestones=[10, 20, 40], last_epoch=args.start_epoch - 1)
+                                                        milestones=[10, 20, 40])
+    # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+    #                                                     milestones=[10, 20, 40], last_epoch=args.start_epoch - 1)
 
     if args.arch in ['resnet1202', 'resnet110']:
         # for resnet1202 original paper uses lr=0.01 for first 400 minibatches for warm-up
@@ -162,9 +164,11 @@ def main():
     for epoch in range(args.start_epoch, args.epochs):
 
         # train for one epoch
+        lr_scheduler.step(epoch)
+
         print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
+
         train(train_loader, model, criterion, optimizer, epoch)
-        lr_scheduler.step()
 
         # evaluate on validation set
         prec1 = validate(val_loader, model, criterion)
@@ -183,7 +187,7 @@ def main():
     save_checkpoint({
         'state_dict': model.state_dict(),
         'best_prec1': best_prec1,
-    }, is_best, filename=os.path.join(args.save_dir, 'checkpoint-{:.04d}.th'.format(epoch)))
+    }, is_best, filename=os.path.join(args.save_dir, 'checkpoint-{:04d}.th'.format(epoch)))
 
 
 def train(train_loader, model, criterion, optimizer, epoch):

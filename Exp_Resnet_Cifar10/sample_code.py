@@ -58,11 +58,11 @@ parser.add_argument('--save-dir', dest='save_dir',
 parser.add_argument('--save-every', dest='save_every',
                     help='Saves checkpoints at every specified number of epochs',
                     type=int, default=10)
-best_prec1 = 0
+best_mAP = 0
 
 
 def main():
-    global args, best_prec1
+    global args, best_mAP
     args = parser.parse_args()
 
 

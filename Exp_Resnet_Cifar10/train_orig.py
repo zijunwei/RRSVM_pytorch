@@ -73,11 +73,11 @@ parser.add_argument('--save-every', dest='save_every',
 
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
-best_prec1 = 0
+best_mAP = 0
 
 
 def main():
-    global args, best_prec1
+    global args, best_mAP
     args = parser.parse_args()
     useCuda =  torch.cuda.is_available() and (args.gpu_id is not None or args.multiGPU)
     torch.manual_seed(args.seed)

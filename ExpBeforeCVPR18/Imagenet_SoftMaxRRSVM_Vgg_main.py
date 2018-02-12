@@ -52,7 +52,7 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
 parser.add_argument('--verbose', '-v', dest='verbose', action='store_true', help='verbose mode, if not, saved in log.txt')
 parser.add_argument('--baseline', '-b', dest='baseline', action='store_true', help='using baseline')
 
-best_prec1 = 0
+best_mAP = 0
 
 # def main():
 #     global args, best_prec1
@@ -131,7 +131,7 @@ if args.resume:
 
     checkpoint = torch.load(os.path.join(save_dir, ckpt_filename), map_location=lambda storage, loc: storage)
     args.start_epoch = checkpoint['epoch']
-    best_prec1 = checkpoint['prec1']
+    best_mAP = checkpoint['prec1']
     model.load_state_dict(checkpoint['state_dict'])
     # TODO: check how to load optimizer correctly
     optimizer.load_state_dict(checkpoint['optimizer'])
@@ -364,8 +364,8 @@ for epoch in range(args.start_epoch, args.n_epochs):
     prec1, prec5 = validate(epoch)
 
     # remember best prec@1 and save checkpoint
-    is_best = prec1 > best_prec1
-    best_prec1 = max(prec1, best_prec1)
+    is_best = prec1 > best_mAP
+    best_mAP = max(prec1, best_mAP)
     save_checkpoint({
         'epoch': epoch + 1,
         'state_dict': model.state_dict(),

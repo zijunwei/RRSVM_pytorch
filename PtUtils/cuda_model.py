@@ -15,8 +15,8 @@ def convertModel2Cuda(model, gpu_id, multiGpu):
                 print("Using ALL {:d} GPUs".format(device_count))
                 model = nn.DataParallel(model, device_ids=[i for i in range(device_count)]).cuda()
             else:
-                print("Using GPUs: {:s}".format(args.gpu_id))
-                device_ids = [int(x) for x in args.gpu_id]
+                print("Using GPUs: {:s}".format(gpu_id))
+                device_ids = [int(x) for x in gpu_id]
                 model = nn.DataParallel(model, device_ids=device_ids).cuda()
 
 

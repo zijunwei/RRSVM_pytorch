@@ -54,11 +54,11 @@ parser.add_argument('--name', default='DenseNet_BC_100_12', type=str,
 parser.set_defaults(bottleneck=True)
 parser.set_defaults(augment=True)
 
-best_prec1 = 0
+best_mAP = 0
 
 
 def main():
-    global args, best_prec1
+    global args, best_mAP
     args = parser.parse_args()
     # if args.tensorboard: configure("runs/%s" % (args.name))
 
