@@ -21,8 +21,8 @@ def HICO_val_transform():
                                      std=[0.229, 0.224, 0.225])
 
     return transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
+            transforms.Resize(480),
+            transforms.CenterCrop(450),
             transforms.ToTensor(),
             normalize,
         ])
@@ -33,7 +33,8 @@ def HICO_train_transform():
                                      std=[0.229, 0.224, 0.225])
 
     return transforms.Compose([
-            transforms.RandomResizedCrop(224),
+            transforms.Resize(480),
+            transforms.RandomResizedCrop(450),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
@@ -80,7 +81,7 @@ def getLabels(labels_file):
 
     return labels
 
-
+nClasses = 600
 
 class HICODataset(data.Dataset):
 
@@ -94,29 +95,28 @@ class HICODataset(data.Dataset):
         annotation_file = os.path.join(dataset_directory, 'labels_{:s}.txt'.format(split))
         image_path_list = glob.glob(os.path.join(dataset_directory, 'images/{:s}2015'.format(split), '*.{:s}'.format(file_ext)))
         image_path_list.sort()
-        labels = getLabels(annotation_file)
-
+        self.labels = getLabels(annotation_file)
+        self.image_path_list = image_path_list
         # clean up to lists
-        self.annotations = []
-        self.image_path_list = []
-        for idx, (s_labels, s_file_path) in enumerate(zip(labels, image_path_list)):
-            for s_label in s_labels:
-                self.image_path_list.append(s_file_path)
-                self.annotations.append(s_label)
-
-
+        # self.annotations = []
+        # self.image_path_list = []
+        # for idx, (s_labels, s_file_path) in enumerate(zip(labels, image_path_list)):
+        #         self.image_path_list.append(s_file_path)
+        #         self.annotations.append(s_labels)
+        #
 
         self.split = split
         self.transform = transform
         print "{:s}\t{:d} Images Found".format(self.split, len(self.image_path_list))
 
-
     def __getitem__(self, index):
         s_image_path = self.image_path_list[index]
         s_image = self.default_loader(s_image_path)
 
-        s_annotation = self.annotations[:, index]
-        s_annotation[s_annotation!=1] = 0 # set all not clear to 0
+        s_positive_idxes = self.labels[index]
+
+        s_annotation = np.zeros(600)
+        s_annotation[s_positive_idxes] = 1
         s_annotation = torch.FloatTensor(s_annotation)
 
         if self.transform is not None:
@@ -151,8 +151,8 @@ if __name__ == '__main__':
         ])
 
 
-    HicoDataset = HICODataset(split='test', transform=Res50Places_val_transform())
-    HicoLoader = torch.utils.data.DataLoader(HicoDataset, batch_size=20, shuffle=True)
+    HicoDataset = HICODataset(split='train', transform=Res50Places_val_transform())
+    HicoLoader = torch.utils.data.DataLoader(HicoDataset, batch_size=20, shuffle=False)
     for i, (image, label) in enumerate(HicoLoader):
 
         print "DEBUG"

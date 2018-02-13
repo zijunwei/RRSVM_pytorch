@@ -109,9 +109,9 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         if useRRSVM:
-            self.avgpool = RRSVM.RRSVM_Module(in_channels=2048, init='eps_max', kernel_size=7)
+            self.avgpool = RRSVM.RRSVM_Module(in_channels=2048, init='eps_max', kernel_size=15)
         else:
-            self.avgpool = nn.AvgPool2d(7)
+            self.avgpool = nn.AvgPool2d(15)
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
         for m in self.modules():

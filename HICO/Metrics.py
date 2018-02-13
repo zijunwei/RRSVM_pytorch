@@ -1,10 +1,13 @@
 import numpy as np
 from sklearn.metrics import average_precision_score
+from Metrics_Helper import calc_pr_ovr_noref
+
 
 def meanAP(predictions, labels):
     # y_true: array, shape = [n_samples] or [n_samples, n_classes]
     # y_score: array, shape = [n_samples] or [n_samples, n_classes]
     return average_precision_score(labels, predictions)
+
 
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
@@ -28,11 +31,11 @@ def accuracy(output, target, topk=(1,)):
     return res
 
 
-def calculate_mAP(y_pred, y_true, nClasses=600):
+def calculate_mAP(y_pred, y_true):
     num_classes = y_true.shape[1]
     average_precisions = []
 
-    for index in range(nClasses):
+    for index in range(num_classes):
         pred = y_pred[:, index]
         label = y_true[:, index]
 
@@ -47,10 +50,8 @@ def calculate_mAP(y_pred, y_true, nClasses=600):
         tp = np.cumsum(tp)
 
         npos = np.sum(sorted_label)
-        if npos == 0:
-            recall = np.zeros(tp.shape)
-        else:
-            recall = tp * 1.0 / npos
+
+        recall = tp * 1.0 / npos
 
         # avoid divide by zero in case the first detection matches a difficult
         # ground truth
@@ -75,8 +76,10 @@ def calculate_mAP(y_pred, y_true, nClasses=600):
 
     return mAP
 
+
 def accuracy_orig(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
+
     maxk = max(topk)
     batch_size = target.size(0)
 
@@ -89,6 +92,50 @@ def accuracy_orig(output, target, topk=(1,)):
         correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
         res.append(correct_k.mul_(100.0 / batch_size))
     return res
+
+
+def match_accuracy(output, target):
+    """Computes the precision@k for the specified values of k"""
+
+    batch_size = target.size(0)
+    output = output.cpu().numpy()
+    target = target.cpu().numpy()
+    # for s_element in range(batch_size):
+    target_indices = np.argwhere(target == 1)
+    n_samples = len(target_indices)
+    indices_per_item = [None]*batch_size
+    for s_idx in target_indices:
+        if indices_per_item[s_idx[0]] is None:
+            indices_per_item[s_idx[0]] = [s_idx[1]]
+        else:
+            indices_per_item[s_idx[0]].append(s_idx[1])
+
+    n_correct = 0
+
+    for s_sample_idx in range(batch_size):
+        s_output = np.argsort(-output[s_sample_idx])[:len(indices_per_item[s_sample_idx])]
+        for s_idx in s_output:
+            if s_idx in indices_per_item[s_sample_idx]:
+                n_correct += 1
+
+    res = n_correct * 1. / n_samples
+    return res
+
+
+def mAPNips2017(all_logits, all_labels):
+  num_classes = all_logits.shape[1]
+  APs = []
+  for cid in range(num_classes):
+    this_logits = all_logits[:, cid]
+    this_labels = all_labels[:, cid]
+    # this_labels = (all_labels == cid).astype('float32')
+    if np.sum(this_labels) == 0:
+      print('No positive videos for class {}. Ignoring...'.format(cid))
+      continue
+    _, _, _, ap = calc_pr_ovr_noref(this_labels, this_logits)
+    APs.append(ap)
+  mAP = np.mean(APs)
+  return mAP, APs
 
 if __name__ == '__main__':
     y_true1 = np.array([0, 0, 1, 1])

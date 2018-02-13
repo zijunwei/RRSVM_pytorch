@@ -32,16 +32,16 @@ def getRes101Model(eval=False, gpu_id=None, multiGpu=False, useRRSVM=False):
     return model
 
 
-def weighted_binary_cross_entropy(output, target, weights=None):
-    if weights is not None:
-        assert len(weights) == 2
-
-        loss = weights[1] * (target * torch.log(output)) + \
-               weights[0] * ((1 - target) * torch.log(1 - output))
-    else:
-        loss = target * torch.log(output) + (1 - target) * torch.log(1 - output)
-
-    return torch.neg(torch.mean(loss))
+# def weighted_binary_cross_entropy(output, target, weights=None):
+#     if weights is not None:
+#         assert len(weights) == 2
+#
+#         loss = weights[1] * (target * torch.log(output)) + \
+#                weights[0] * ((1 - target) * torch.log(1 - output))
+#     else:
+#         loss = target * torch.log(output) + (1 - target) * torch.log(1 - output)
+#
+#     return torch.neg(torch.mean(loss))
 
 
 class WeightedBCEWithLogitsLoss(torch.nn.Module):
@@ -70,7 +70,7 @@ def weighted_binary_cross_entropy_with_logits(input, target, weights=None, size_
     # w[0]: w_n, w[1]: w_p
 
     max_val = (-input).clamp(min=0)
-    loss = weights[0] * (1- target)*(input + max_val) - weights[1] * max_val * target  + \
+    loss = weights[0] * (1- target)*(input + max_val) + weights[1] * max_val * target  + \
            (weights[1] * target + weights[0] * (1 - target))*(1 + (-max_val).exp() + (-input - max_val).exp()).log()
 
     if not reduce:
@@ -79,12 +79,6 @@ def weighted_binary_cross_entropy_with_logits(input, target, weights=None, size_
         return loss.mean()
     else:
         return loss.sum()
-    #     loss = weights[1] * (target * torch.log(output)) + \
-    #            weights[0] * ((1 - target) * torch.log(1 - output))
-    # else:
-    #     loss = target * torch.log(output) + (1 - target) * torch.log(1 - output)
-
-    return torch.neg(torch.mean(loss))
 
 
 if __name__ == '__main__':
