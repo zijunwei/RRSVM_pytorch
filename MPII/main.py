@@ -19,7 +19,7 @@ import py_utils.dir_utils as dir_utils
 import Network
 from PtUtils import cuda_model
 import RRSVM.RRSVM as RRSVM
-import HICODataLoader2 as HICODataLoader
+import MPIIDataLoader
 import Metrics
 import progressbar
 import numpy as np
@@ -35,13 +35,13 @@ parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                     metavar='LR', help='initial learning rate')
-parser.add_argument('-b', '--batch-size', default=10, type=int,
+parser.add_argument('-b', '--batch-size', default=16, type=int,
                     metavar='N', help='mini-batch size (default: 256 for others, 32 for Inception-V3)')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight-decay', '--wd', default=5e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)')
-parser.add_argument('--epochs', default=10, type=int, metavar='N',
+parser.add_argument('--epochs', default=50, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
@@ -67,10 +67,11 @@ def main():
     # criterion = nn.CrossEntropyLoss()
     # criterion = nn.MultiLabelSoftMarginLoss(weight=torch.FloatTensor([10,1]).cuda())
     # you need to modify this to satisfy the papers w_p =10 and w_n = 1
-    criterion = Network.WeightedBCEWithLogitsLoss(weight=torch.FloatTensor([1, 10]))
+    # criterion = Network.WeightedBCEWithLogitsLoss(weight=torch.FloatTensor([1, 10]))
     # criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.CrossEntropyLoss()
     if use_cuda:
-        criterion.cuda()
+        # criterion.cuda()
         cudnn.benchmark = True
 
 
@@ -85,7 +86,7 @@ def main():
 
 
     global save_dir
-    save_dir = './snapshots/HICO_ResNet101_wBCE'
+    save_dir = './snapshots/MPII_ResNet101'
     save_dir = dir_utils.get_dir(save_dir)
 
     # optionally resume from a checkpoint
@@ -103,11 +104,11 @@ def main():
         print("=> loading checkpoint '{}', epoch: {:d}, current Precision: {:.04f}".format(ckpt_filename, args.start_epoch, best_mAP))
 
 
-    train_loader = torch.utils.data.DataLoader(HICODataLoader.HICODataset(split='train', transform=HICODataLoader.HICO_train_transform()),
+    train_loader = torch.utils.data.DataLoader(MPIIDataLoader.MPIIDataset(split='train', transform=MPIIDataLoader.MPII_train_transform()),
         batch_size=args.batch_size, shuffle=True,
         num_workers=args.workers, pin_memory=True)
 
-    test_loader = torch.utils.data.DataLoader(HICODataLoader.HICODataset(split='test', transform=HICODataLoader.HICO_val_transform()),
+    test_loader = torch.utils.data.DataLoader(MPIIDataLoader.MPIIDataset(split='val', transform=MPIIDataLoader.MPII_val_transform()),
         batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True)
 
@@ -181,8 +182,8 @@ def train(train_loader, model, criterion, optimizer, epoch, use_cuda):
         # s_mAP = Metrics.meanAP(output.data.cpu().numpy(), target_var.data.cpu().numpy())
 
         # prec1, prec5 = Metrics.accuracy(output.data, target, topk=(1, 5))
-        prec = Metrics.match_accuracy(output.data, target)
-        top5.update(prec, input.size(0))
+        _, prec = Metrics.accuracy_orig(output.data, target, topk=(1,5))
+        top5.update(prec[0], input.size(0))
         losses.update(loss.data[0], input.size(0))
 
         # mAP.update(s_mAP, input.size(0))
@@ -201,7 +202,7 @@ def train(train_loader, model, criterion, optimizer, epoch, use_cuda):
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\tLR {lr:.3f}\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Prec {mAP.val:.3f} ({mAP.avg:.3f})\t'.format(
+                  'Top5 {mAP.val:.3f} ({mAP.avg:.3f})\t'.format(
                    epoch, i, len(train_loader), batch_time=batch_time,
                    data_time=data_time, lr=optimizer.param_groups[0]['lr'], loss=losses, mAP=top5))
 
@@ -247,8 +248,8 @@ def validate(val_loader, model, criterion, useCuda):
         end = time.time()
 
     y_pred = np.vstack(y_pred)
-    y_true = np.vstack(y_true)
-    mAP = Metrics.calculate_mAP(y_pred, y_true)
+    y_true = np.hstack(y_true)
+    mAP, _ = Metrics.mAPNips2017(y_pred, y_true)
     # mAP, _ = Metrics.mAPNips2017(y_pred, y_true)
 
     print(' * mAP  {:.3f}\t *loss {loss.avg:.4f}'
