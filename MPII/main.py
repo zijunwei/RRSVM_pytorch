@@ -56,7 +56,7 @@ best_mAP = 0
 def main():
     global args, best_mAP
     args = parser.parse_args()
-    useRRSVM = False
+    useRRSVM = True
     use_cuda = cuda_model.ifUseCuda(args.gpu_id, args.multiGpu)
 
     model = Network.getRes101Model(eval=False, gpu_id=args.gpu_id, multiGpu=args.multiGpu, useRRSVM=useRRSVM)
@@ -86,7 +86,7 @@ def main():
 
 
     global save_dir
-    save_dir = './snapshots/MPII_ResNet101'
+    save_dir = './snapshots/MPII_ResNet101_RRSVM'
     save_dir = dir_utils.get_dir(save_dir)
 
     # optionally resume from a checkpoint
@@ -96,11 +96,12 @@ def main():
         assert os.path.isfile(os.path.join(save_dir, ckpt_filename)), 'Error: no checkpoint directory found!'
 
         checkpoint = torch.load(os.path.join(save_dir, ckpt_filename), map_location=lambda storage, loc: storage)
-        args.start_epoch = checkpoint['epoch']
+        # args.start_epoch = checkpoint['epoch']
+        args.start_epoch = 0
         best_mAP = checkpoint['mAP']
         model.load_state_dict(checkpoint['state_dict'], strict=False)
         # TODO: check how to load optimizer correctly
-        optimizer.load_state_dict(checkpoint['optimizer'])
+        # optimizer.load_state_dict(checkpoint['optimizer'])
         print("=> loading checkpoint '{}', epoch: {:d}, current Precision: {:.04f}".format(ckpt_filename, args.start_epoch, best_mAP))
 
 
@@ -232,9 +233,9 @@ def validate(val_loader, model, criterion, useCuda):
         # compute output
         output = model(input_var)
         loss = criterion(output, target_var)
-        sigmoid_output = F.sigmoid(output)
+        prob = F.softmax(output, dim=1)
 
-        y_pred.append(sigmoid_output.data.cpu().numpy())
+        y_pred.append(prob.data.cpu().numpy())
         y_true.append(target_var.data.cpu().numpy())
 
         # s_mAP = Metrics.meanAP(output.data.cpu().numpy().transpose(), target_var.data.cpu().numpy().transpose())
